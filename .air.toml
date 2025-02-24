@@ -1,0 +1,16 @@
+# .air.toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "tmp/main"  # Path to the binary
+  cmd = "go build -o tmp/main"  # Command to build the binary
+  include_ext = ["go"]  # File extensions to watch
+  exclude_dir = ["assets", "tmp"]  # Directories to exclude
+
+[watch]
+  include = ["**/*.go"]  # Files to watch
+  exclude = ["tmp/**"]  # Exclude tmp directory
+
+[log]
+  time = true  # Show time in logs

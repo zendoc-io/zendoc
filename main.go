@@ -1,16 +1,17 @@
 package main
 
 import (
+	"backend/routes"
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	engine := gin.New()
-	/*
-		engine.GET("/test", func(c *gin.Context) {
-			c.JSON(200, gin.H{"message": "Hello, world!"})
-			return
-		})
-	*/
-	engine.Run(":3000")
+	r := gin.Default()
+
+	routes.SetupRoutes(r)
+
+	fmt.Println("Gin finished starting")
+	r.Run(":3000")
 }
