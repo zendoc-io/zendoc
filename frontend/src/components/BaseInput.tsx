@@ -10,6 +10,7 @@ type Props = {
   onChange?: (value: string) => void;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
+  className?: string;
 };
 
 export default function BaseInput({
@@ -21,6 +22,7 @@ export default function BaseInput({
   onChange,
   leftIcon,
   rightIcon,
+  className,
 }: Props) {
   return (
     <div className="relative w-full">
@@ -31,7 +33,7 @@ export default function BaseInput({
       )}
       <input
         className={`w-full rounded-lg border border-transparent bg-gray-600 p-3 transition-colors outline-none focus:border-gray-500 ${leftIcon ? "pl-8" : ""
-          } ${rightIcon ? "pr-8" : ""}`}
+          } ${rightIcon ? "pr-8" : ""} ${className}`}
         type={type}
         value={value}
         name={name}

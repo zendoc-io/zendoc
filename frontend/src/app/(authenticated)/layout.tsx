@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import LogoIcon from "@/../public/logo.svg";
 import BaseButton from "@/components/BaseButton";
@@ -19,15 +21,17 @@ export default function AuthenticatedLayout({ children }: Props) {
     {
       icon: <DashboardIcon width={16} />,
       title: "Dashboard",
+      slug: "dashboard",
       subLinks: [],
     },
     {
       icon: <InfrastructureIcon width={16} />,
       title: "Infrastructure",
+      slug: "infrastructure",
       subLinks: [
-        { title: "Changelog", href: "#" },
-        { title: "Changelog", href: "#" },
-        { title: "Changelog", href: "#" },
+        { title: "Servers", href: "servers" },
+        { title: "Virtual machines", href: "virtual-machines" },
+        { title: "Services", href: "services" },
       ],
     },
   ];
@@ -70,7 +74,7 @@ export default function AuthenticatedLayout({ children }: Props) {
           ))}
         </div>
       </aside>
-      <main className="mt-16 ml-52">{children}</main>
+      <main className="mt-16 ml-52 w-full">{children}</main>
     </div>
   );
 }
