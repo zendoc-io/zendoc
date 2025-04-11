@@ -8,7 +8,7 @@ echo "Removing PostgreSQL data volume..."
 docker volume rm zendoc-postgres-data || true
 
 echo "Starting PostgreSQL with initialization scripts..."
-docker-compose -f ./deploy/docker-compose.yml up -d 
+docker-compose -f docker-compose.yml up -d 
 
 echo "Waiting for PostgreSQL to initialize..."
 sleep 5
