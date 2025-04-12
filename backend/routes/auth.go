@@ -8,7 +8,7 @@ import (
 
 func AuthRoutes(r *gin.Engine) {
 	r.POST("/auth/register", handlers.Register)
-	r.POST("/auth/login", handlers.Login)
+	r.POST("/auth/login/password", handlers.LoginPassword)
 	r.GET("/auth/logout", handlers.Logout)
 	r.GET("/auth/refresh", handlers.Refresh)
 	r.GET("/auth/me", handlers.Me)

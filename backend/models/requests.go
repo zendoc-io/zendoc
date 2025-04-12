@@ -9,3 +9,8 @@ type RUserRegister struct {
 	Utype        string `json:"type"`
 	Role         string `json:"role"`
 }
+
+type RUserLoginPassword struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}

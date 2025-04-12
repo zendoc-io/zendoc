@@ -13,12 +13,12 @@ import (
 var DB *sqlx.DB
 
 func InitDB() (*sqlx.DB, error) {
-	host := getEnv("DB_HOST", "localhost")
-	port := getEnv("DB_PORT", "5432")
-	user := getEnv("DB_USER", "zendoc")
-	password := getEnv("DB_PASSWORD", "zendoc")
-	dbname := getEnv("DB_NAME", "zendoc")
-	sslmode := getEnv("DB_SSLMODE", "disable")
+	host := GetEnv("DB_HOST", "localhost")
+	port := GetEnv("DB_PORT", "5432")
+	user := GetEnv("DB_USER", "zendoc")
+	password := GetEnv("DB_PASSWORD", "zendoc")
+	dbname := GetEnv("DB_NAME", "zendoc")
+	sslmode := GetEnv("DB_SSLMODE", "disable")
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		host, port, user, password, dbname, sslmode)
@@ -62,7 +62,7 @@ func CloseDB() {
 	}
 }
 
-func getEnv(key, fallback string) string {
+func GetEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}

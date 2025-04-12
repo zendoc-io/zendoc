@@ -6,11 +6,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-var insertString = "INSERT INTO auth.users (id, email, password, firstname, lastname, organization, type) VALUES ($1, $2, $3, $4, $5, $6, $7);"
+var insertUsersString = "INSERT INTO auth.users (id, email, password, firstname, lastname, organization, type) VALUES ($1, $2, $3, $4, $5, $6, $7);"
+var insertSessionString = "INSERT INTO auth.sessions (user_id, refresh_token, user_agent, ip, expires_at) VALUES ($1, $2, $3, $4, $5);"
 
 func RegisterUser(body models.RUserRegister) error {
 	db := DB
@@ -41,7 +43,15 @@ func RegisterUser(body models.RUserRegister) error {
 		err = errors.New("User already exists!")
 		return err
 	}
-	res, err := tx.Exec(insertString, uuid, body.Email, body.Password, body.Firstname, body.Lastname, body.Organization, body.Utype)
+	encEmail, err := Encrypt(body.Email)
+	hashPassword, err := Hash256(body.Password)
+
+	if err != nil {
+		err = errors.New("Encryption failed!")
+		return err
+	}
+
+	res, err := tx.Exec(insertUsersString, uuid, encEmail, hashPassword, body.Firstname, body.Lastname, body.Organization, body.Utype)
 	if err != nil {
 		return err
 	}
@@ -72,4 +82,60 @@ func RegisterUser(body models.RUserRegister) error {
 	}
 
 	return err
+}
+
+func LoginPasswordUser(body models.RUserLoginPassword, userAgent string, ip string) (models.USesssion, error) {
+	db := DB
+	var err error
+	// var uuid uuid.UUID = uuid.New()
+	var data models.USesssion
+
+	var ctx = context.Background()
+	tx, err := db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return data, fmt.Errorf("Transaction failed %v!", err.Error())
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var ids []string
+	encEmail, err := Encrypt(body.Email)
+	hashPassword, err := Hash256(body.Password)
+	if err != nil {
+		err = errors.New("Encryption failed!")
+		return data, err
+	}
+	err = tx.Select(&ids, "select id from auth.users where email = $1 and password = $2", encEmail, hashPassword)
+	if err != nil {
+		return data, err
+	}
+	if len(ids) == 0 || len(ids) > 1 {
+		err = errors.New("User doesn't exist!")
+		return data, err
+	}
+
+	expiresAt := time.Now().AddDate(0, 0, 7)
+	refreshToken, err := GenerateKey()
+	res, err := tx.Exec(insertSessionString, ids[0], refreshToken, userAgent, ip, expiresAt)
+	rows, err := res.RowsAffected()
+	if err != nil && rows > 0 {
+		err = errors.New("Creating session failed!")
+		return data, err
+	}
+	data = models.USesssion{
+		RefreshToken: refreshToken,
+		ExpiresAt:    expiresAt,
+	}
+
+	return data, err
 }
