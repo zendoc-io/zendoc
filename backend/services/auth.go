@@ -159,3 +159,42 @@ func LoginPasswordUser(body models.RUserLoginPassword, userAgent string, ip stri
 
 	return data, err
 }
+
+func LogoutSession(body models.RUserLogout) error {
+	db := DB
+	var err error
+
+	var ctx = context.Background()
+	tx, err := db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return fmt.Errorf("Transaction failed %v!", err.Error())
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	res, err := tx.Exec("delete from auth.sessions where refresh_token = $1", body.RefreshToken)
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		err = errors.New("Session doesn't exist!")
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		err = errors.New("Transaction commit failed!")
+		return err
+	}
+
+	return err
+}
