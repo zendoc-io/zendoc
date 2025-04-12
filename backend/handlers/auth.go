@@ -38,8 +38,8 @@ func LoginPassword(c *gin.Context) {
 	data, err := services.LoginPasswordUser(requestBody, c.Request.UserAgent(), c.Request.RemoteAddr)
 	if err != nil {
 		switch err.Error() {
-		case "User already exists!":
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case "User doesn't exist!":
+			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid email or password"})
 		default:
 			log.Fatalf("DB Error: %v", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Something wen't wrong!"})

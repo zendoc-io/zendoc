@@ -3,6 +3,7 @@ package services
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -13,6 +14,10 @@ import (
 
 func Encrypt(plaintext string) (string, error) {
 	key, err := base64.StdEncoding.DecodeString(GetEnv("AES_KEY", "VCaeFVlItzPjmA3WjGPmJ2d3Jd3uwayU8HUJ1mzmNyM="))
+	if err != nil {
+		return "", err
+	}
+
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", err
@@ -23,18 +28,33 @@ func Encrypt(plaintext string) (string, error) {
 		return "", err
 	}
 
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", err
-	}
+	nonceKey := deriveNonceKey(key)
+	h := hmac.New(sha256.New, nonceKey)
+	h.Write([]byte(plaintext))
+	nonceHash := h.Sum(nil)
+
+	nonce := nonceHash[:gcm.NonceSize()]
 
 	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
 
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
+// Helper function to derive a nonce key from the main key
+func deriveNonceKey(key []byte) []byte {
+	h := sha256.New()
+	h.Write([]byte("email_nonce"))
+	h.Write(key)
+	return h.Sum(nil)
+}
+
+// The Decrypt function remains unchanged as it extracts the nonce from the ciphertext
 func Decrypt(cipherText string) (string, error) {
 	key, err := base64.StdEncoding.DecodeString(GetEnv("AES_KEY", "VCaeFVlItzPjmA3WjGPmJ2d3Jd3uwayU8HUJ1mzmNyM="))
+	if err != nil {
+		return "", err
+	}
+
 	ciphertext, err := base64.StdEncoding.DecodeString(cipherText)
 	if err != nil {
 		return "", err
@@ -81,3 +101,4 @@ func Hash256(plaintext string) (string, error) {
 	hashString := hex.EncodeToString(hashBytes)
 	return hashString, err
 }
+

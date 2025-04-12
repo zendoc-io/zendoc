@@ -38,16 +38,17 @@ func RegisterUser(body models.RUserRegister) error {
 		}
 	}()
 
-	err = tx.Select(&ids, "SELECT id FROM auth.users WHERE email = $1", body.Email)
-	if len(ids) > 0 {
-		err = errors.New("User already exists!")
-		return err
-	}
 	encEmail, err := Encrypt(body.Email)
 	hashPassword, err := Hash256(body.Password)
 
 	if err != nil {
 		err = errors.New("Encryption failed!")
+		return err
+	}
+
+	err = tx.Select(&ids, "SELECT id FROM auth.users WHERE email = $1", encEmail)
+	if len(ids) > 0 {
+		err = errors.New("User already exists!")
 		return err
 	}
 
@@ -111,6 +112,7 @@ func LoginPasswordUser(body models.RUserLoginPassword, userAgent string, ip stri
 	var ids []string
 	encEmail, err := Encrypt(body.Email)
 	hashPassword, err := Hash256(body.Password)
+
 	if err != nil {
 		err = errors.New("Encryption failed!")
 		return data, err
@@ -124,14 +126,32 @@ func LoginPasswordUser(body models.RUserLoginPassword, userAgent string, ip stri
 		return data, err
 	}
 
+	var sessIds []string
+	err = tx.Select(&sessIds, "select id from auth.sessions where user_id = $1", ids[0])
+	if err != nil {
+		return data, err
+	}
+	if len(sessIds) > 0 {
+		_, err := tx.Exec("delete from auth.sessions where user_id = $1", ids[0])
+		if err != nil {
+			return data, err
+		}
+	}
+
 	expiresAt := time.Now().AddDate(0, 0, 7)
 	refreshToken, err := GenerateKey()
 	res, err := tx.Exec(insertSessionString, ids[0], refreshToken, userAgent, ip, expiresAt)
 	rows, err := res.RowsAffected()
-	if err != nil && rows > 0 {
+	if err != nil || rows == 0 {
 		err = errors.New("Creating session failed!")
 		return data, err
 	}
+
+	if err = tx.Commit(); err != nil {
+		err = errors.New("Transaction commit failed!")
+		return data, err
+	}
+
 	data = models.USesssion{
 		RefreshToken: refreshToken,
 		ExpiresAt:    expiresAt,
