@@ -2,97 +2,153 @@
 import BaseInput from "@/components/BaseInput";
 import SearchIcon from "@/../public/icons/search.svg";
 import FilterIcon from "@/../public/icons/filter.svg";
-import Link from "next/link";
 import BaseButton from "@/components/BaseButton";
 import ChevronIcon from "@/../public/icons/chevron.svg";
 import TableViewIcon from "@/../public/icons/table-view.svg";
 import PencilIcon from "@/../public/icons/pencil.svg";
-import FilledChevronIcon from "@/../public/icons/filled-chevron.svg";
-import { useState } from "react";
-import TableHeader from "@/components/Table/TableHeader";
-import TableRowLink from "@/components/Table/TableRowLink";
-import TableRowBox from "@/components/Table/TableRowBox";
+import { useEffect, useState } from "react";
+import { CellValue, TableHeader } from "@/components/Table/Table";
+import EditViewModal from "@/components/Modal/EditViewModal";
+import BaseTable from "@/components/Table/BaseTable";
 
 export default function ServerPage() {
-  const [tableHeaders, setTableHeaders] = useState([
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tableHeaders, setTableHeaders] = useState<TableHeader[]>([
     {
+      key: "id",
+      name: "ID",
+      sort: null,
+      show: false,
+      type: "text",
+    },
+    {
+      key: "name",
       name: "Name",
       sort: "asc",
+      show: true,
+      type: "link",
     },
     {
+      key: "test",
+      name: "Test",
+      sort: null,
+      show: false,
+      type: "text",
+    },
+    {
+      key: "status",
       name: "Status",
       sort: null,
+      show: true,
+      type: "box",
     },
     {
+      key: "ip",
       name: "IP",
       sort: null,
+      show: true,
+      type: "text",
     },
     {
+      key: "role",
       name: "Role",
       sort: null,
+      show: true,
+      type: "box",
     },
     {
+      key: "os",
       name: "OS",
       sort: null,
+      show: true,
+      type: "os",
     },
     {
+      key: "vms",
       name: "VMs",
       sort: null,
+      show: true,
+      type: "link",
     },
     {
+      key: "services",
       name: "Services",
       sort: null,
+      show: true,
+      type: "link",
     },
   ]);
 
-  function handleSort(index: number) {
-    const newTableHeaders = tableHeaders.map((header, i) => {
-      if (i === index) {
-        if (header.sort === "asc") {
-          return {
-            ...header,
-            sort: "desc",
-          };
-        } else {
-          return {
-            ...header,
-            sort: "asc",
-          };
-        }
-      } else {
-        return {
-          ...header,
-          sort: null,
-        };
-      }
-    });
-
-    setTableHeaders(newTableHeaders);
-  }
-
-  const tableData = [
-    {
-      name: "Server 1",
-      status: {
-        name: "Online",
+  const initialTableData: CellValue[][] = [
+    [
+      { text: 1 },
+      {
+        text: "Server 1",
+        link: "/app/infrastructure/servers",
+      },
+      { text: "Test" },
+      {
+        text: "Online",
         color: "green",
       },
-      ip: "192.168.1.42",
-      role: {
-        name: "Application server",
+      { text: "192.168.1.42" },
+      {
+        text: "Application server",
         color: "#FF9F0A",
       },
-      os: {
-        name: "Ubuntu 22.04 LTS",
+      {
+        text: "Ubuntu 22.04 LTS",
         type: "linux",
       },
-      vms: 1,
-      services: 4,
-    },
+      {
+        text: 3,
+        link: "/app/infrastructure/vms",
+      },
+      {
+        text: 5,
+        link: "/app/infrastructure/services",
+      },
+    ],
+    [
+      { text: 2 },
+      {
+        text: "Server 2",
+        link: "/app/infrastructure/servers",
+      },
+      { text: "Test" },
+      {
+        text: "Offline",
+        color: "orange",
+      },
+      { text: "192.168.1.43" },
+      {
+        text: "Application server",
+        color: "#AF00FF",
+      },
+      {
+        text: "Ubuntu 22.04 LTS",
+        type: "linux",
+      },
+      {
+        text: 3,
+        link: "/app/infrastructure/vms",
+      },
+      {
+        text: 5,
+        link: "/app/infrastructure/services",
+      },
+    ],
   ];
 
   return (
     <div className="p-3">
+      {isModalOpen && (
+        <EditViewModal
+          tableHeaders={tableHeaders}
+          onClose={() => setIsModalOpen(false)}
+          setTableHeaders={setTableHeaders}
+        />
+      )}
       <h1 className="mb-6 text-2xl">Servers</h1>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -143,83 +199,18 @@ export default function ServerPage() {
             icon={<PencilIcon width={12} />}
             type="icon"
             className="h-10 text-gray-500"
+            onClick={() => setIsModalOpen(true)}
           >
             Edit view
           </BaseButton>
         </div>
       </div>
       <div className="rounded-lg border border-gray-700">
-        <table className="w-full text-left">
-          <thead className="border-b border-gray-700">
-            <tr>
-              <th className="p-3">
-                <input type="checkbox" className="h-4 w-4" />
-              </th>
-              {tableHeaders.map((header, index) => (
-                <TableHeader
-                  key={index}
-                  index={index}
-                  name={header.name}
-                  sort={header.sort}
-                  handleSort={handleSort}
-                />
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tableData.map((data, index) => (
-              <tr
-                key={index}
-                className={`${index + 1 !== tableData.length && "border-b"} border-gray-700`}
-              >
-                <td className="p-3">
-                  <input type="checkbox" className="h-4 w-4" />
-                </td>
-                <td className="p-3">
-                  <TableRowLink
-                    href="/app/infrastructure/servers"
-                    name={data.name}
-                  />
-                </td>
-                <td className="p-3">
-                  <TableRowBox
-                    backgroundColor={data.status.color}
-                    name={data.status.name}
-                  />
-                </td>
-                <td className="p-3">{data.ip}</td>
-                <td className="p-3">
-                  <TableRowBox
-                    backgroundColor={data.role.color}
-                    name={data.role.name}
-                  />
-                </td>
-                <td className="p-3">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={`/icons/os/${data.os.type}.svg`}
-                      alt={data.os.name}
-                      className="w-4"
-                    />
-                    {data.os.name}
-                  </div>
-                </td>
-                <td className="p-3">
-                  <TableRowLink
-                    href="/app/infrastructure/vms"
-                    name={data.vms}
-                  />
-                </td>
-                <td className="p-3">
-                  <TableRowLink
-                    href="/app/infrastructure/vms"
-                    name={data.services}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <BaseTable
+          data={initialTableData}
+          headers={tableHeaders}
+          setTableHeaders={setTableHeaders}
+        />
       </div>
     </div>
   );
