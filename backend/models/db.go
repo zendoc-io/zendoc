@@ -1,24 +1,25 @@
 package models
 
 import (
+	"database/sql"
 	"time"
 )
 
 type User struct {
-	ID             string     `db:"id" json:"id"`
-	Email          string     `db:"email" json:"email"`
-	Password       string     `db:"password" json:"-"`
-	FirstName      string     `db:"firstname" json:"firstName"`
-	LastName       string     `db:"lastname" json:"lastName"`
-	OrganizationID string     `db:"organization" json:"organizationId,omitempty"`
-	UserType       string     `db:"type" json:"userType"`
-	MFAEnabled     bool       `db:"mfa_enabled" json:"mfaEnabled"`
-	MFASecret      string     `db:"mfa_secret" json:"-"`
-	LastLogin      *time.Time `db:"last_login" json:"lastLogin,omitempty"`
-	EmailVerified  bool       `db:"verified" json:"emailVerified"`
-	Active         bool       `db:"active" json:"active"`
-	CreatedAt      time.Time  `db:"created_at" json:"createdAt"`
-	UpdatedAt      time.Time  `db:"updated_at" json:"updatedAt"`
+	ID             string         `db:"id" json:"id"`
+	Email          string         `db:"email" json:"email"`
+	Password       string         `db:"password" json:"-"`
+	FirstName      string         `db:"firstname" json:"firstName"`
+	LastName       string         `db:"lastname" json:"lastName"`
+	OrganizationID string         `db:"organization" json:"organizationId,omitempty"`
+	UserType       string         `db:"type" json:"userType"`
+	MFAEnabled     sql.NullString `db:"mfa_enabled" json:"mfaEnabled"`
+	MFASecret      sql.NullString `db:"mfa_secret" json:"-"`
+	LastLogin      *time.Time     `db:"last_login" json:"lastLogin,omitempty"`
+	EmailVerified  bool           `db:"verified" json:"emailVerified"`
+	Active         bool           `db:"active" json:"active"`
+	CreatedAt      time.Time      `db:"created_at" json:"createdAt"`
+	UpdatedAt      time.Time      `db:"updated_at" json:"updatedAt"`
 }
 
 type Organization struct {

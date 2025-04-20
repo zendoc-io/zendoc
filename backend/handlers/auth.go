@@ -25,7 +25,7 @@ func Register(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": "hallo"})
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 
 	return
 }
@@ -76,5 +76,54 @@ func Logout(c *gin.Context) {
 	return
 
 }
-func Refresh(c *gin.Context) {}
-func Me(c *gin.Context)      {}
+func Refresh(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "Authorization header not found"})
+		return
+	}
+	userRefresh := models.RUserLogout{
+		RefreshToken: authHeader,
+	}
+
+	data, err := services.RefreshSession(userRefresh, c.Request.UserAgent(), c.Request.RemoteAddr)
+	if err != nil {
+		switch err.Error() {
+		case "Session doesn't exist!":
+			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
+		default:
+			log.Fatalf("DB Error: %v", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "data": data})
+	return
+}
+func Me(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "Authorization header not found"})
+		return
+	}
+	userRefresh := models.RUserLogout{
+		RefreshToken: authHeader,
+	}
+
+	data, err := services.Me(userRefresh)
+	if err != nil {
+		switch err.Error() {
+		case "Session doesn't exist!":
+			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
+		default:
+			log.Fatalf("DB Error: %v", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "data": data})
+	return
+
+}
