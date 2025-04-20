@@ -13,6 +13,7 @@ func Register(c *gin.Context) {
 	var requestBody models.RUserRegister
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
+		return
 	}
 	err := services.RegisterUser(requestBody)
 	if err != nil {
@@ -20,7 +21,7 @@ func Register(c *gin.Context) {
 		case "User already exists!":
 			c.JSON(http.StatusConflict, gin.H{"status": err.Error()})
 		default:
-			log.Fatalf("DB Error: %v", err.Error())
+			log.Printf("DB Error: %v", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
 		}
 		return
@@ -32,7 +33,8 @@ func Register(c *gin.Context) {
 func LoginPassword(c *gin.Context) {
 	var requestBody models.RUserLoginPassword
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid arguments!"})
+		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
+		return
 	}
 
 	data, err := services.LoginPasswordUser(requestBody, c.Request.UserAgent(), c.Request.RemoteAddr)
@@ -41,7 +43,7 @@ func LoginPassword(c *gin.Context) {
 		case "User doesn't exist!":
 			c.JSON(http.StatusForbidden, gin.H{"status": "Invalid email or password"})
 		default:
-			log.Fatalf("DB Error: %v", err.Error())
+			log.Printf("DB Error: %v", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
 		}
 		return
@@ -66,7 +68,7 @@ func Logout(c *gin.Context) {
 		case "Session doesn't exist!":
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
-			log.Fatalf("DB Error: %v", err.Error())
+			log.Printf("DB Error: %v", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
 		}
 		return
@@ -77,22 +79,20 @@ func Logout(c *gin.Context) {
 
 }
 func Refresh(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "Authorization header not found"})
+	userId, exists := c.Get("userId")
+	sUserId, ok := userId.(string)
+	if !exists || !ok || sUserId == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "Unauthorized"})
 		return
 	}
-	userRefresh := models.RUserLogout{
-		RefreshToken: authHeader,
-	}
 
-	data, err := services.RefreshSession(userRefresh, c.Request.UserAgent(), c.Request.RemoteAddr)
+	data, err := services.RefreshSession(sUserId, c.Request.UserAgent(), c.Request.RemoteAddr)
 	if err != nil {
 		switch err.Error() {
 		case "Session doesn't exist!":
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
-			log.Fatalf("DB Error: %v", err.Error())
+			log.Printf("DB Error: %v", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
 		}
 		return
@@ -102,22 +102,20 @@ func Refresh(c *gin.Context) {
 	return
 }
 func Me(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "Authorization header not found"})
+	userId, exists := c.Get("userId")
+	sUserId, ok := userId.(string)
+	if !exists || !ok || sUserId == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "Unauthorized"})
 		return
 	}
-	userRefresh := models.RUserLogout{
-		RefreshToken: authHeader,
-	}
 
-	data, err := services.Me(userRefresh)
+	data, err := services.Me(sUserId)
 	if err != nil {
 		switch err.Error() {
 		case "Session doesn't exist!":
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
-			log.Fatalf("DB Error: %v", err.Error())
+			log.Printf("DB Error: %v", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
 		}
 		return

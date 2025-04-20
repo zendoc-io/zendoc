@@ -206,7 +206,7 @@ func LogoutSession(body models.RUserLogout) error {
 	return err
 }
 
-func RefreshSession(body models.RUserLogout, userAgent string, ip string) (models.USesssion, error) {
+func RefreshSession(uID string, userAgent string, ip string) (models.USesssion, error) {
 	db := DB
 	var err error
 	var data models.USesssion
@@ -229,18 +229,7 @@ func RefreshSession(body models.RUserLogout, userAgent string, ip string) (model
 		}
 	}()
 
-	var ids []string
-
-	err = tx.Select(&ids, "select user_id from auth.sessions where refresh_token = $1 and user_agent = $2", body.RefreshToken, userAgent)
-	if err != nil {
-		return data, err
-	}
-	if len(ids) == 0 || len(ids) > 1 {
-		err = errors.New("Session doesn't exist!")
-		return data, err
-	}
-
-	res, err := tx.Exec("delete from auth.sessions where user_id = $1", ids[0])
+	res, err := tx.Exec("delete from auth.sessions where user_id = $1", uID)
 	if err != nil {
 		return data, err
 	}
@@ -252,7 +241,7 @@ func RefreshSession(body models.RUserLogout, userAgent string, ip string) (model
 
 	expiresAt := time.Now().AddDate(0, 0, 7)
 	refreshToken, err := GenerateKey()
-	res, err = tx.Exec(insertSessionString, ids[0], refreshToken, userAgent, ip, expiresAt)
+	res, err = tx.Exec(insertSessionString, uID, refreshToken, userAgent, ip, expiresAt)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 		err = errors.New("Creating session failed!")
@@ -277,7 +266,7 @@ func RefreshSession(body models.RUserLogout, userAgent string, ip string) (model
 	return data, err
 }
 
-func Me(body models.RUserLogout) (models.User, error) {
+func Me(uID string) (models.User, error) {
 	db := DB
 	var err error
 	var data models.User
@@ -285,7 +274,7 @@ func Me(body models.RUserLogout) (models.User, error) {
 	var ctx = context.Background()
 	tx, err := db.BeginTxx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
-		ReadOnly:  false,
+		ReadOnly:  true,
 	})
 	if err != nil {
 		return data, fmt.Errorf("Transaction failed %v!", err.Error())
@@ -300,24 +289,19 @@ func Me(body models.RUserLogout) (models.User, error) {
 		}
 	}()
 
-	var uIDs []string
-	err = tx.Select(&uIDs, "select user_id from auth.sessions where refresh_token = $1", body.RefreshToken)
-	if err != nil {
-		return data, err
-	}
-	if len(uIDs) == 0 || len(uIDs) > 1 {
-		err = errors.New("Session doesn't exist!")
-		return data, err
-	}
-
 	var uInformation []models.User
 
-	err = tx.Select(&uInformation, "select * from auth.users where id = $1", uIDs[0])
+	err = tx.Select(&uInformation, "select * from auth.users where id = $1", uID)
 	if err != nil {
 		return data, err
 	}
 	if len(uInformation) == 0 || len(uInformation) > 1 {
 		err = errors.New("User doesn't exist!")
+		return data, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		err = errors.New("Transaction commit failed!")
 		return data, err
 	}
 

@@ -18,3 +18,8 @@ type RUserLoginPassword struct {
 type RUserLogout struct {
 	RefreshToken string `json:"refresh_token"`
 }
+
+type RCreateRole struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

@@ -7,6 +7,6 @@ import (
 )
 
 func Hello(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "Hello from API!"})
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "Hello from API!"})
 	return
 }
