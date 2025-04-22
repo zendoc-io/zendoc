@@ -3,7 +3,7 @@
 import React from "react";
 import LogoIcon from "@/../public/logo.svg";
 import BaseButton from "@/components/BaseButton";
-import DoubleArrowIcon from "@/../public/icons/double-arrow.svg";
+import SettingsIcon from "@/../public/icons/settings.svg";
 import BaseInput from "@/components/BaseInput";
 import SearchIcon from "@/../public/icons/search.svg";
 import DashboardIcon from "@/../public/icons/dashboard.svg";
@@ -110,6 +110,16 @@ export default function AuthenticatedLayout({ children }: Props) {
         { title: "Servers", href: "servers" },
         { title: "Virtual machines", href: "virtual-machines" },
         { title: "Services", href: "services" },
+      ],
+    },
+    {
+      icon: <SettingsIcon width={16} />,
+      title: "Settings",
+      slug: "settings",
+      subLinks: [
+        { title: "Users", href: "users" },
+        { title: "API Keys", href: "api-keys" },
+        { title: "System", href: "system" },
       ],
     },
   ];
