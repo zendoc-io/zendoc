@@ -29,7 +29,7 @@ export default function BaseButton({
   let classes = {
     primary:
       "flex items-center justify-center gap-3 text-center rounded-lg bg-primary p-4 px-6 font-semibold text-white tracking-[0.016rem] hover:bg-primary-dark transition-colors cursor-pointer",
-    icon: "rounded-lg bg-gray-600 p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-700 transition-colors",
+    icon: "rounded-lg bg-gray-600 p-3 flex items-center justify-center gap-3 cursor-pointer hover:bg-gray-700 transition-colors",
   }[type];
   if (!fullWidth) {
     classes += " w-fit";

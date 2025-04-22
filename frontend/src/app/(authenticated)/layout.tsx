@@ -38,7 +38,6 @@ export default function AuthenticatedLayout({ children }: Props) {
       read: true,
       timestamp: new Date(),
     },
-
     {
       id: 3,
       title: "New server has been detected",
@@ -76,6 +75,7 @@ export default function AuthenticatedLayout({ children }: Props) {
       timestamp: new Date(),
     },
   ]);
+  const [showUserMenu, setShowUserMenu] = React.useState(true);
 
   const filteredNotifications = React.useMemo(() => {
     return notifications
@@ -189,23 +189,44 @@ export default function AuthenticatedLayout({ children }: Props) {
             </div>
           )}
         </div>
-        <div className="border-l border-gray-700">
+        <div className="realative border-l border-gray-700">
           <BaseButton
             type="icon"
             icon={<UserIcon width={16} />}
             className="rounded-none bg-transparent"
+            onClick={() => setShowUserMenu(!showUserMenu)}
           >
             <div className="text-left">
               <p className="text-sm">Tim Witzdam</p>
               <span className="text-xs text-gray-500">Admin</span>
             </div>
           </BaseButton>
+          {showUserMenu && (
+            <div className="absolute top-16 right-0 w-52 rounded-bl-lg border-b border-l border-gray-700 bg-gray-800 text-left text-sm">
+              <div className="grid gap-2 p-2">
+                <BaseButton
+                  type="icon"
+                  className="text-xs font-semibold"
+                  href="/user"
+                  fullWidth
+                >
+                  Settings
+                </BaseButton>
+                <BaseButton
+                  type="icon"
+                  className="text-red text-xs font-semibold"
+                  fullWidth
+                >
+                  Log out
+                </BaseButton>
+              </div>
+            </div>
+          )}
         </div>
       </header>
       <aside className="fixed top-0 left-0 h-full w-52 border-r border-gray-700 bg-gray-800">
-        <div className="mb-6 flex items-center justify-between gap-3 p-3">
+        <div className="mb-3 p-3">
           <LogoIcon width={130} />
-          <BaseButton icon={<DoubleArrowIcon width={12} />} type="icon" />
         </div>
         <div className="mb-3 px-3">
           <BaseInput
