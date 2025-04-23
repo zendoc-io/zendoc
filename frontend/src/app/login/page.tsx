@@ -1,6 +1,6 @@
 "use client";
 import BaseButton from "@/components/BaseButton";
-import BaseInput from "@/components/BaseInput";
+import BaseInput from "@/components/inputs/BaseInput";
 import React from "react";
 
 export default function LoginPage() {

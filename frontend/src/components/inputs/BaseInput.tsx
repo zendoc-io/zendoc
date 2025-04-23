@@ -2,6 +2,7 @@
 import React, { ReactNode } from "react";
 
 type Props = {
+  id?: string;
   placeholder?: string;
   type?: string;
   value?: string;
@@ -11,9 +12,11 @@ type Props = {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   className?: string;
+  ref?: React.Ref<HTMLInputElement>;
 };
 
 export default function BaseInput({
+  id,
   placeholder,
   type = "text",
   value = "",
@@ -23,6 +26,7 @@ export default function BaseInput({
   leftIcon,
   rightIcon,
   className,
+  ref,
 }: Props) {
   return (
     <div className="relative w-full">
@@ -32,6 +36,7 @@ export default function BaseInput({
         </div>
       )}
       <input
+        id={id}
         className={`w-full rounded-lg border border-transparent bg-gray-600 p-3 transition-colors outline-none focus:border-gray-500 ${leftIcon ? "pl-8" : ""
           } ${rightIcon ? "pr-8" : ""} ${className}`}
         type={type}
@@ -44,6 +49,7 @@ export default function BaseInput({
             onChange(e.target.value);
           }
         }}
+        ref={ref}
       />
       {rightIcon && (
         <div className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400">

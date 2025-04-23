@@ -1,5 +1,5 @@
 "use client";
-import BaseInput from "@/components/BaseInput";
+import BaseInput from "@/components/inputs/BaseInput";
 import SearchIcon from "@/../public/icons/search.svg";
 import FilterIcon from "@/../public/icons/filter.svg";
 import BaseButton from "@/components/BaseButton";
@@ -8,7 +8,7 @@ import TableViewIcon from "@/../public/icons/table-view.svg";
 import PencilIcon from "@/../public/icons/pencil.svg";
 import { useEffect, useState } from "react";
 import { CellValue, TableHeader } from "@/components/Table/Table";
-import EditViewModal from "@/components/Modal/EditViewModal";
+import EditViewModal from "@/components/modal/EditViewModal";
 import BaseTable from "@/components/Table/BaseTable";
 
 export default function UserPage() {

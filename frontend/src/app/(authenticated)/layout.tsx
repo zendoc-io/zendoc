@@ -4,7 +4,7 @@ import React from "react";
 import LogoIcon from "@/../public/logo.svg";
 import BaseButton from "@/components/BaseButton";
 import SettingsIcon from "@/../public/icons/settings.svg";
-import BaseInput from "@/components/BaseInput";
+import BaseInput from "@/components/inputs/BaseInput";
 import SearchIcon from "@/../public/icons/search.svg";
 import DashboardIcon from "@/../public/icons/dashboard.svg";
 import InfrastructureIcon from "@/../public/icons/infrastructure.svg";
@@ -12,6 +12,8 @@ import NavLink, { NavLinkProps } from "@/components/Sidebar/NavLink";
 import BellIcon from "@/../public/icons/bell.svg";
 import UserIcon from "@/../public/icons/user.svg";
 import NotificationIndicator from "@/components/NotificationIndicator";
+import GlobalSearchModal from "@/components/modal/GlobalSearchModal/GlobalSearchModal";
+import Link from "next/link";
 
 type Props = {
   children: React.ReactNode;
@@ -75,7 +77,8 @@ export default function AuthenticatedLayout({ children }: Props) {
       timestamp: new Date(),
     },
   ]);
-  const [showUserMenu, setShowUserMenu] = React.useState(true);
+  const [showUserMenu, setShowUserMenu] = React.useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = React.useState(true);
 
   const filteredNotifications = React.useMemo(() => {
     return notifications
@@ -136,6 +139,9 @@ export default function AuthenticatedLayout({ children }: Props) {
 
   return (
     <div className="flex">
+      {showGlobalSearch && (
+        <GlobalSearchModal onClose={() => setShowGlobalSearch(false)} />
+      )}
       <header className="fixed top-0 left-0 z-10 ml-52 flex h-16 w-[calc(100%-13rem)] items-center justify-end border-b border-gray-700 bg-gray-800">
         <div className="relative mr-3">
           <BaseButton
@@ -163,7 +169,7 @@ export default function AuthenticatedLayout({ children }: Props) {
                 </BaseButton>
               </div>
               {filteredNotifications.map((notification, index) => (
-                <a
+                <Link
                   key={notification.id}
                   href={notification.link}
                   className={`group block border-b border-gray-700 p-4 transition-colors hover:bg-gray-700`}
@@ -185,7 +191,7 @@ export default function AuthenticatedLayout({ children }: Props) {
                   <span className="text-xs text-gray-500">
                     {notification.timestamp.toLocaleString()}
                   </span>
-                </a>
+                </Link>
               ))}
               <div className="p-4">
                 <BaseButton
@@ -239,10 +245,15 @@ export default function AuthenticatedLayout({ children }: Props) {
           <LogoIcon width={130} />
         </div>
         <div className="mb-3 px-3">
-          <BaseInput
-            placeholder="Search"
-            leftIcon={<SearchIcon width={12} />}
-          />
+          <button
+            type="button"
+            onClick={() => setShowGlobalSearch(!showGlobalSearch)}
+          >
+            <BaseInput
+              placeholder="Search"
+              leftIcon={<SearchIcon width={12} />}
+            />
+          </button>
         </div>
         <div className="grid border-t border-gray-700">
           {navLinks.map((navLink, index) => (
