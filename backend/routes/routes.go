@@ -7,5 +7,7 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine) {
+	AuthRoutes(r)
+	RoleRoute(r)
 	r.GET("/hello", handlers.Hello)
 }
