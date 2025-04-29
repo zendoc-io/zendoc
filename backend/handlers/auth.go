@@ -5,6 +5,7 @@ import (
 	"backend/services"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,7 +23,7 @@ func Register(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"status": err.Error()})
 		default:
 			log.Printf("DB Error: %v", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
 		}
 		return
 	}
@@ -36,7 +37,6 @@ func LoginPassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
-
 	data, err := services.LoginPasswordUser(requestBody, c.Request.UserAgent(), c.Request.RemoteAddr)
 	if err != nil {
 		switch err.Error() {
@@ -44,39 +44,56 @@ func LoginPassword(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"status": "Invalid email or password"})
 		default:
 			log.Printf("DB Error: %v", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
 		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "data": data})
-
-	return
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "Failed to encode session"})
+		return
+	}
+	cookie := &http.Cookie{
+		Name:     "session_token",
+		Value:    data.RefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(24 * time.Hour),
+		SameSite: http.SameSiteLaxMode,
+	}
+	http.SetCookie(c.Writer, cookie)
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 func Logout(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "Authorization header not found"})
+	cookie, err := c.Request.Cookie("session_token")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "Session token not found"})
 		return
 	}
 	userLogout := models.RUserLogout{
-		RefreshToken: authHeader,
+		RefreshToken: cookie.Value,
 	}
-
-	err := services.LogoutSession(userLogout)
+	err = services.LogoutSession(userLogout)
 	if err != nil {
 		switch err.Error() {
 		case "Session doesn't exist!":
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
 			log.Printf("DB Error: %v", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
 		}
 		return
 	}
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Unix(0, 0),
+		SameSite: http.SameSiteLaxMode,
+	})
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-
-	return
-
 }
 func Refresh(c *gin.Context) {
 	userId, exists := c.Get("userId")
@@ -93,7 +110,7 @@ func Refresh(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
 			log.Printf("DB Error: %v", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
 		}
 		return
 	}
@@ -116,7 +133,7 @@ func Me(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
 			log.Printf("DB Error: %v", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
 		}
 		return
 	}
