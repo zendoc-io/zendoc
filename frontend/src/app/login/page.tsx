@@ -1,6 +1,7 @@
 "use client";
 import BaseButton from "@/components/BaseButton";
 import BaseInput from "@/components/inputs/BaseInput";
+import { apiFetch } from "@/utils/api";
 import React from "react";
 
 export default function LoginPage() {
@@ -16,7 +17,27 @@ export default function LoginPage() {
 
     const username = data.username;
     const password = data.password;
-    const backendURL = process.env.NEXT_PUBLIC_API_URL;
+
+    try {
+      const data = await apiFetch("/auth/login/password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          email: username,
+          password,
+        }),
+      });
+
+      setSuccess("Login successful. Redirecting...");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
+    } catch (error) {
+      setError("Invalid username or password");
+    }
   }
 
   return (

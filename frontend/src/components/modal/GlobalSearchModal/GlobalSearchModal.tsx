@@ -61,7 +61,7 @@ export default function GlobalSearchModal({ onClose }: Props) {
       ],
     },
     {
-      name: "Server",
+      name: "Service",
       results: [
         {
           name: "prod-mongo-db",

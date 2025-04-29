@@ -1,5 +1,5 @@
 "use client";
-import React, { ReactNode } from "react";
+import React, { ReactNode, Ref } from "react";
 
 type Props = {
   id?: string;
@@ -12,14 +12,14 @@ type Props = {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   className?: string;
-  ref?: React.Ref<HTMLInputElement>;
+  ref?: Ref<HTMLInputElement>;
 };
 
 export default function BaseInput({
   id,
   placeholder,
   type = "text",
-  value = "",
+  value,
   name,
   required,
   onChange,
@@ -37,10 +37,11 @@ export default function BaseInput({
       )}
       <input
         id={id}
-        className={`w-full rounded-lg border border-transparent bg-gray-600 p-3 transition-colors outline-none focus:border-gray-500 ${leftIcon ? "pl-8" : ""
-          } ${rightIcon ? "pr-8" : ""} ${className}`}
+        className={`w-full rounded-lg border border-transparent bg-gray-600 p-3 transition-colors outline-none focus:border-gray-500 ${
+          leftIcon ? "pl-8" : ""
+        } ${rightIcon ? "pr-8" : ""} ${className}`}
         type={type}
-        value={value}
+        value={value !== undefined ? value : undefined}
         name={name}
         required={required}
         placeholder={placeholder}

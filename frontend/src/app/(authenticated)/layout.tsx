@@ -14,6 +14,7 @@ import UserIcon from "@/../public/icons/user.svg";
 import NotificationIndicator from "@/components/NotificationIndicator";
 import GlobalSearchModal from "@/components/modal/GlobalSearchModal/GlobalSearchModal";
 import Link from "next/link";
+import { apiFetch } from "@/utils/api";
 
 type Props = {
   children: React.ReactNode;
@@ -78,7 +79,7 @@ export default function AuthenticatedLayout({ children }: Props) {
     },
   ]);
   const [showUserMenu, setShowUserMenu] = React.useState(false);
-  const [showGlobalSearch, setShowGlobalSearch] = React.useState(true);
+  const [showGlobalSearch, setShowGlobalSearch] = React.useState(false);
 
   const filteredNotifications = React.useMemo(() => {
     return notifications
@@ -135,6 +136,21 @@ export default function AuthenticatedLayout({ children }: Props) {
           : notification,
       ),
     );
+  }
+
+  async function logout() {
+    try {
+      const data = await apiFetch("/auth/logout", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   }
 
   return (
@@ -232,6 +248,7 @@ export default function AuthenticatedLayout({ children }: Props) {
                   type="icon"
                   className="text-red text-xs font-semibold"
                   fullWidth
+                  onClick={logout}
                 >
                   Log out
                 </BaseButton>
