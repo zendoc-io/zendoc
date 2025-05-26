@@ -10,6 +10,7 @@ import (
 func RoleRoute(r *gin.Engine) {
 	r.GET("/role", middleware.CheckSession(), handlers.Roles)
 	r.POST("/role/create", middleware.CheckSession(), handlers.Create)
-	// r.POST("/role/assign", handlers.AssignRole)
-	// r.DELETE("/role/delete", handlers.AssignRole)
+	r.POST("/role/assign", middleware.CheckSession(), handlers.Assign)
+	r.POST("/role/unassign", middleware.CheckSession(), handlers.Unassign)
+	r.DELETE("/role/delete", middleware.CheckSession(), handlers.Delete)
 }
