@@ -140,7 +140,6 @@ func LoginPasswordUser(body models.RUserLoginPassword, userAgent string, ip stri
 
 	expiresAt := time.Now().AddDate(0, 0, 7)
 	refreshToken, err := GenerateKey()
-	fmt.Printf("INSERT INTO auth.sessions (user_id, refresh_token, user_agent, ip, expires_at) VALUES (%s, %s, %s, %s, %s);", ids[0], refreshToken, userAgent, ip, expiresAt)
 	res, err := tx.Exec(insertSessionString, ids[0], refreshToken, userAgent, ip, expiresAt)
 	if err != nil {
 		err = errors.New("Creating session failed!")
