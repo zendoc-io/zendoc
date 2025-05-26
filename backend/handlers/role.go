@@ -79,6 +79,8 @@ func Assign(c *gin.Context) {
 		switch err.Error() {
 		case "Role doesn't exist!":
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
+		case "User already has this role!":
+			c.JSON(http.StatusConflict, gin.H{"status": err.Error()})
 		default:
 			log.Printf("DB Error: %v", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
