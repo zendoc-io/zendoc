@@ -37,3 +37,13 @@ type RUserSearch struct {
 	Name           string `form:"name"`
 	OrganizationId string `form:"org_id"`
 }
+
+type RCreateDeviceRole struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type RAssignDeviceRole struct {
+	ServerID string `json:"server_id"`
+	RoleID   string `json:"role_id"`
+}
