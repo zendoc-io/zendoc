@@ -71,4 +71,6 @@ type RSearchDevices struct {
 	IP     string       `form:"ip"`
 	Subnet string       `form:"subnet"`
 	Os     string       `form:"os"`
+	Limit  string       `form:"limit"`
+	Offset string       `form:"offset"`
 }

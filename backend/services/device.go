@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -98,6 +99,24 @@ func SearchDevices(params models.RSearchDevices) ([]models.DeviceSearchReturn, e
 	}
 
 	fullQuery += " ORDER BY s.name ASC"
+
+	if params.Limit != "" {
+		iLimit, err := strconv.Atoi(params.Limit)
+		if (err != nil) || iLimit <= 0 {
+			err = errors.New("Invalid limit!")
+			return deviceSearchReturn, err
+		}
+		fullQuery += " LIMIT " + params.Limit
+	}
+
+	if params.Offset != "" {
+		iOffset, err := strconv.Atoi(params.Offset)
+		if (err != nil) || iOffset < 0 {
+			err = errors.New("Invalid offset!")
+			return deviceSearchReturn, err
+		}
+		fullQuery += " OFFSET " + params.Offset
+	}
 
 	err = db.Select(&deviceSearchReturn, fullQuery, args...)
 	if err != nil {
