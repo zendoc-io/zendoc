@@ -15,7 +15,7 @@ export default function LoginPage() {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
-    const username = data.username;
+    const email = data.email;
     const password = data.password;
 
     try {
@@ -26,7 +26,7 @@ export default function LoginPage() {
         },
         credentials: "include",
         body: JSON.stringify({
-          email: username,
+          email,
           password,
         }),
       });
@@ -36,7 +36,7 @@ export default function LoginPage() {
         window.location.href = "/";
       }, 1000);
     } catch (error) {
-      setError("Invalid username or password");
+      setError("Invalid email or password");
     }
   }
 
@@ -50,12 +50,7 @@ export default function LoginPage() {
             id="login"
             className="flex flex-col gap-4"
           >
-            <BaseInput
-              type="text"
-              name="username"
-              placeholder="Username"
-              required
-            />
+            <BaseInput type="text" name="email" placeholder="Email" required />
             <BaseInput
               type="password"
               name="password"
