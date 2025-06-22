@@ -13,7 +13,7 @@ import (
 )
 
 func Encrypt(plaintext string) (string, error) {
-	key, err := base64.StdEncoding.DecodeString(GetEnv("AES_KEY", "VCaeFVlItzPjmA3WjGPmJ2d3Jd3uwayU8HUJ1mzmNyM="))
+	key, err := base64.StdEncoding.DecodeString(GetEnv("AES_KEY"))
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +50,7 @@ func deriveNonceKey(key []byte) []byte {
 
 // The Decrypt function remains unchanged as it extracts the nonce from the ciphertext
 func Decrypt(cipherText string) (string, error) {
-	key, err := base64.StdEncoding.DecodeString(GetEnv("AES_KEY", "VCaeFVlItzPjmA3WjGPmJ2d3Jd3uwayU8HUJ1mzmNyM="))
+	key, err := base64.StdEncoding.DecodeString(GetEnv("AES_KEY"))
 	if err != nil {
 		return "", err
 	}
@@ -101,4 +101,3 @@ func Hash256(plaintext string) (string, error) {
 	hashString := hex.EncodeToString(hashBytes)
 	return hashString, err
 }
-

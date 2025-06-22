@@ -37,7 +37,8 @@ func LoginPassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
-	data, err := services.LoginPasswordUser(requestBody, c.Request.UserAgent(), c.Request.RemoteAddr)
+
+	data, err := services.LoginPasswordUser(requestBody, c.Request.UserAgent(), c.RemoteIP())
 	if err != nil {
 		switch err.Error() {
 		case "User doesn't exist!":

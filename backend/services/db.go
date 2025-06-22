@@ -13,12 +13,12 @@ import (
 var DB *sqlx.DB
 
 func InitDB() (*sqlx.DB, error) {
-	host := GetEnv("DB_HOST", "localhost")
-	port := GetEnv("DB_PORT", "5432")
-	user := GetEnv("DB_USER", "zendoc")
-	password := GetEnv("DB_PASSWORD", "zendoc")
-	dbname := GetEnv("DB_NAME", "zendoc")
-	sslmode := GetEnv("DB_SSLMODE", "disable")
+	host := GetEnv("DB_HOST")
+	port := GetEnv("DB_PORT")
+	user := GetEnv("DB_USER")
+	password := GetEnv("DB_PASSWORD")
+	dbname := GetEnv("DB_NAME")
+	sslmode := GetEnv("DB_SSLMODE")
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		host, port, user, password, dbname, sslmode)
@@ -41,13 +41,13 @@ func InitDB() (*sqlx.DB, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database after %d attempts: %w", maxRetries, err)
+		log.Fatalf("failed to connect to database after %d attempts: %v", maxRetries, err)
 	}
 
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		log.Fatalf("failed to ping database: %v", err)
 	}
 
 	log.Println("Successfully connected to database")
@@ -62,9 +62,10 @@ func CloseDB() {
 	}
 }
 
-func GetEnv(key, fallback string) string {
+func GetEnv(key string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}
-	return fallback
+	log.Fatalf("Environment variable %s not found", key)
+	return ""
 }
