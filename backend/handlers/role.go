@@ -23,7 +23,7 @@ func Roles(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
 			log.Printf("DB Error: %v", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
 		}
 		return
 	}
@@ -52,7 +52,7 @@ func Create(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
 		default:
 			log.Printf("DB Error: %v", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something wen't wrong!"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
 		}
 		return
 	}

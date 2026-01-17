@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+@layer base {
+  body {
+    @apply text-base;
+    @apply bg-gray-900;
+    @apply text-white;
+  }
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 0.3fr 1.7fr;
+  grid-template-rows: 1fr;
+  gap: 0px 0px;
+  grid-template-areas: ". right";
+}
+
+.dashboard-grid .right {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 0.2fr 1.8fr;
+  gap: 0px 0px;
+  grid-template-areas:
+    "."
+    ".";
+  grid-area: right;
+}
