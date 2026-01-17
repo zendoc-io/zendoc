@@ -140,6 +140,9 @@ func AssignRole(body models.RAssignRole) error {
 
 	res, err := tx.Exec(upsertUserRoleQuery, body.UserID, roleID[0], time.Now())
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate") {
+			return errors.New("User already has this role!")
+		}
 		return err
 	}
 	rowsAffected, err := res.RowsAffected()

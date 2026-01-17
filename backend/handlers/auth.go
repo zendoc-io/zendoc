@@ -37,7 +37,7 @@ func LoginPassword(c *gin.Context) {
 		return
 	}
 
-	data, err := services.LoginPasswordUser(requestBody, c.Request.UserAgent(), c.Request.RemoteAddr)
+	data, err := services.LoginPasswordUser(requestBody, c.Request.UserAgent(), c.RemoteIP())
 	if err != nil {
 		switch err.Error() {
 		case "User doesn't exist!":
