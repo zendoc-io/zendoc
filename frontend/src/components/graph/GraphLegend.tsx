@@ -1,6 +1,6 @@
 export default function GraphLegend() {
   return (
-    <div className="absolute bottom-4 left-4 z-10 rounded-lg border border-gray-700 bg-gray-800/90 p-4 shadow-xl backdrop-blur-sm">
+    <div className="absolute bottom-40 left-4 z-10 rounded-lg border border-gray-700 bg-gray-800/90 p-4 shadow-xl backdrop-blur-sm">
       <h4 className="mb-3 text-xs font-semibold tracking-wide text-gray-300 uppercase">
         Legend
       </h4>

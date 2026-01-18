@@ -64,7 +64,12 @@ export default function GraphPage() {
   const onNodeClick = useCallback(
     (_event: any, node: any) => {
       const nodeId = node.id;
-      const [type, id] = nodeId.split("-");
+      // Split only on the first hyphen to preserve UUID format
+      const dashIndex = nodeId.indexOf("-");
+      if (dashIndex === -1) return;
+      
+      const type = nodeId.substring(0, dashIndex);
+      const id = nodeId.substring(dashIndex + 1);
 
       switch (type) {
         case "server":
