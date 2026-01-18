@@ -86,6 +86,7 @@ export default function AuthenticatedLayout({ children }: Props) {
       title: "Infrastructure",
       slug: "infrastructure",
       subLinks: [
+        { title: "Graph View", href: "graph" },
         { title: "Servers", href: "servers" },
         { title: "Virtual machines", href: "virtual-machines" },
         { title: "Services", href: "services" },

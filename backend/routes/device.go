@@ -26,4 +26,7 @@ func DeviceRoutes(r *gin.Engine) {
 	// Filter options routes
 	r.GET("/device/os", middleware.CheckAuth(), middleware.RequirePermissions(models.PermReadDevices), handlers.GetOSOptions)
 	r.GET("/device/subnet", middleware.CheckAuth(), middleware.RequirePermissions(models.PermReadDevices), handlers.GetSubnetOptions)
+
+	// Graph route
+	r.GET("/device/graph", middleware.CheckAuth(), middleware.RequirePermissions(models.PermReadDevices), handlers.GetGraph)
 }
