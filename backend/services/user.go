@@ -60,3 +60,24 @@ func UserSearch(body models.RUserSearch) ([]models.UserSearchReturn, error) {
 	}
 	return searchReturn, err
 }
+
+// GetUserName retrieves the user's full name by ID
+func GetUserName(userID string) (string, error) {
+	db := DB
+	var ctx = context.Background()
+
+	var user struct {
+		Firstname string `db:"firstname"`
+		Lastname  string `db:"lastname"`
+	}
+
+	err := db.GetContext(ctx, &user, "SELECT firstname, lastname FROM auth.users WHERE id = $1", userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "Unknown User", nil
+		}
+		return "Unknown User", err
+	}
+
+	return user.Firstname + " " + user.Lastname, nil
+}

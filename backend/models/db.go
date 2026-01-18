@@ -2,24 +2,53 @@ package models
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 )
 
+// NullString is a wrapper around sql.NullString that marshals to JSON properly
+type NullString struct {
+	sql.NullString
+}
+
+// MarshalJSON for NullString
+func (ns NullString) MarshalJSON() ([]byte, error) {
+	if !ns.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(ns.String)
+}
+
+// UnmarshalJSON for NullString
+func (ns *NullString) UnmarshalJSON(data []byte) error {
+	var s *string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	if s != nil {
+		ns.Valid = true
+		ns.String = *s
+	} else {
+		ns.Valid = false
+	}
+	return nil
+}
+
 type User struct {
-	ID             string         `db:"id" json:"id"`
-	Email          string         `db:"email" json:"email"`
-	Password       string         `db:"password" json:"-"`
-	FirstName      string         `db:"firstname" json:"firstName"`
-	LastName       string         `db:"lastname" json:"lastName"`
-	OrganizationID string         `db:"organization" json:"organizationId,omitempty"`
-	UserType       string         `db:"type" json:"userType"`
-	MFAEnabled     sql.NullString `db:"mfa_enabled" json:"mfaEnabled"`
-	MFASecret      sql.NullString `db:"mfa_secret" json:"-"`
-	LastLogin      *time.Time     `db:"last_login" json:"lastLogin,omitempty"`
-	EmailVerified  bool           `db:"verified" json:"emailVerified"`
-	Active         bool           `db:"active" json:"active"`
-	CreatedAt      time.Time      `db:"created_at" json:"createdAt"`
-	UpdatedAt      time.Time      `db:"updated_at" json:"updatedAt"`
+	ID             string     `db:"id" json:"id"`
+	Email          string     `db:"email" json:"email"`
+	Password       string     `db:"password" json:"-"`
+	FirstName      string     `db:"firstname" json:"firstName"`
+	LastName       string     `db:"lastname" json:"lastName"`
+	OrganizationID string     `db:"organization" json:"organizationId,omitempty"`
+	UserType       string     `db:"type" json:"userType"`
+	MFAEnabled     NullString `db:"mfa_enabled" json:"mfaEnabled"`
+	MFASecret      NullString `db:"mfa_secret" json:"-"`
+	LastLogin      *time.Time `db:"last_login" json:"lastLogin,omitempty"`
+	EmailVerified  bool       `db:"verified" json:"emailVerified"`
+	Active         bool       `db:"active" json:"active"`
+	CreatedAt      time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt      time.Time  `db:"updated_at" json:"updatedAt"`
 }
 
 type Organization struct {
@@ -67,25 +96,25 @@ type UserRole struct {
 }
 
 type Subnet struct {
-	ID        string         `db:"id" json:"id"`
-	Name      string         `db:"name" json:"name"`
-	Mask      sql.NullInt16  `db:"mask" json:"mask"`
-	Gateway   sql.NullString `db:"gateway" json:"gateway"`
-	DNS       sql.NullString `db:"dns" json:"dns"`
-	CreatedAt time.Time      `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time      `db:"updated_at" json:"updatedAt"`
-	CreatedBy string         `db:"created_by" json:"createdBy"`
-	UpdatedBy string         `db:"updated_by" json:"updatedBy"`
+	ID        string        `db:"id" json:"id"`
+	Name      string        `db:"name" json:"name"`
+	Mask      sql.NullInt16 `db:"mask" json:"mask"`
+	Gateway   NullString    `db:"gateway" json:"gateway"`
+	DNS       NullString    `db:"dns" json:"dns"`
+	CreatedAt time.Time     `db:"created_at" json:"createdAt"`
+	UpdatedAt time.Time     `db:"updated_at" json:"updatedAt"`
+	CreatedBy string        `db:"created_by" json:"createdBy"`
+	UpdatedBy string        `db:"updated_by" json:"updatedBy"`
 }
 
 type DeviceRole struct {
-	ID          string         `db:"id" json:"id"`
-	Name        string         `db:"name" json:"name"`
-	Description sql.NullString `db:"description" json:"description"`
-	CreatedAt   time.Time      `db:"created_at" json:"createdAt"`
-	UpdatedAt   time.Time      `db:"updated_at" json:"updatedAt"`
-	CreatedBy   string         `db:"created_by" json:"createdBy"`
-	UpdatedBy   string         `db:"updated_by" json:"updatedBy"`
+	ID          string     `db:"id" json:"id"`
+	Name        string     `db:"name" json:"name"`
+	Description NullString `db:"description" json:"description"`
+	CreatedAt   time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt   time.Time  `db:"updated_at" json:"updatedAt"`
+	CreatedBy   string     `db:"created_by" json:"createdBy"`
+	UpdatedBy   string     `db:"updated_by" json:"updatedBy"`
 }
 
 type Icon struct {
@@ -98,14 +127,14 @@ type Icon struct {
 }
 
 type OS struct {
-	ID          string         `db:"id" json:"id"`
-	Name        string         `db:"name" json:"name"`
-	Description sql.NullString `db:"description" json:"description"`
-	IconID      sql.NullString `db:"icon_id" json:"iconId"`
-	CreatedAt   time.Time      `db:"created_at" json:"createdAt"`
-	UpdatedAt   time.Time      `db:"updated_at" json:"updatedAt"`
-	CreatedBy   string         `db:"created_by" json:"createdBy"`
-	UpdatedBy   string         `db:"updated_by" json:"updatedBy"`
+	ID          string     `db:"id" json:"id"`
+	Name        string     `db:"name" json:"name"`
+	Description NullString `db:"description" json:"description"`
+	IconID      NullString `db:"icon_id" json:"iconId"`
+	CreatedAt   time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt   time.Time  `db:"updated_at" json:"updatedAt"`
+	CreatedBy   string     `db:"created_by" json:"createdBy"`
+	UpdatedBy   string     `db:"updated_by" json:"updatedBy"`
 }
 
 type Document struct {

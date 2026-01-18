@@ -134,7 +134,7 @@ func GetServiceByID(serviceID string) (models.ServiceSearchReturn, error) {
 }
 
 // CreateService creates a new service
-func CreateService(body models.RCreateService, userID string) error {
+func CreateService(body models.RCreateService, userID string, userName string) error {
 	db := DB
 	var err error
 	var ctx = context.Background()
@@ -173,9 +173,11 @@ func CreateService(body models.RCreateService, userID string) error {
 		INSERT INTO devices.service (
 			name, type, status, host_type, host_id, port, protocol, health, created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id
 	`
 
-	_, err = tx.ExecContext(ctx, query,
+	var serviceID string
+	err = tx.QueryRowContext(ctx, query,
 		body.Name,
 		body.Type,
 		body.Status,
@@ -186,7 +188,7 @@ func CreateService(body models.RCreateService, userID string) error {
 		body.Health,
 		userID,
 		userID,
-	)
+	).Scan(&serviceID)
 
 	if err != nil {
 		err = errors.New("Failed to create service")
@@ -198,11 +200,22 @@ func CreateService(body models.RCreateService, userID string) error {
 		return err
 	}
 
+	// Create activity log after successful commit
+	go CreateActivityLog(
+		models.ActivityEntityService,
+		serviceID,
+		body.Name,
+		models.ActivityActionCreated,
+		[]models.ActivityChange{},
+		userID,
+		userName,
+	)
+
 	return nil
 }
 
 // UpdateService updates an existing service
-func UpdateService(body models.RUpdateService, userID string) error {
+func UpdateService(body models.RUpdateService, userID string, userName string) error {
 	db := DB
 	var err error
 	var ctx = context.Background()
@@ -223,6 +236,25 @@ func UpdateService(body models.RUpdateService, userID string) error {
 			tx.Rollback()
 		}
 	}()
+
+	// Get old values before update
+	var oldService struct {
+		Name     string               `db:"name"`
+		Type     models.ServiceType   `db:"type"`
+		Status   models.ServiceStatus `db:"status"`
+		HostType string               `db:"host_type"`
+		HostID   string               `db:"host_id"`
+		Port     int32                `db:"port"`
+		Protocol string               `db:"protocol"`
+		Health   models.ServiceHealth `db:"health"`
+	}
+	err = tx.GetContext(ctx, &oldService, "SELECT name, type, status, host_type, host_id, port, protocol, health FROM devices.service WHERE id = $1", body.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("Service not found")
+		}
+		return err
+	}
 
 	// Update service
 	query := `
@@ -262,11 +294,94 @@ func UpdateService(body models.RUpdateService, userID string) error {
 		return err
 	}
 
+	// Track changes
+	changes := []models.ActivityChange{}
+	if oldService.Name != body.Name {
+		changes = append(changes, models.ActivityChange{
+			Field:    "name",
+			OldValue: oldService.Name,
+			NewValue: body.Name,
+		})
+	}
+	if oldService.Type != body.Type {
+		changes = append(changes, models.ActivityChange{
+			Field:    "type",
+			OldValue: string(oldService.Type),
+			NewValue: string(body.Type),
+		})
+	}
+	if oldService.Status != body.Status {
+		changes = append(changes, models.ActivityChange{
+			Field:    "status",
+			OldValue: string(oldService.Status),
+			NewValue: string(body.Status),
+		})
+	}
+	if oldService.HostType != body.HostType {
+		changes = append(changes, models.ActivityChange{
+			Field:    "host_type",
+			OldValue: oldService.HostType,
+			NewValue: body.HostType,
+		})
+	}
+	if oldService.HostID != body.HostID {
+		changes = append(changes, models.ActivityChange{
+			Field:    "host_id",
+			OldValue: oldService.HostID,
+			NewValue: body.HostID,
+		})
+	}
+	if oldService.Port != body.Port {
+		changes = append(changes, models.ActivityChange{
+			Field:    "port",
+			OldValue: oldService.Port,
+			NewValue: body.Port,
+		})
+	}
+	if oldService.Protocol != body.Protocol {
+		changes = append(changes, models.ActivityChange{
+			Field:    "protocol",
+			OldValue: oldService.Protocol,
+			NewValue: body.Protocol,
+		})
+	}
+	if oldService.Health != body.Health {
+		changes = append(changes, models.ActivityChange{
+			Field:    "health",
+			OldValue: string(oldService.Health),
+			NewValue: string(body.Health),
+		})
+	}
+
+	// Create activity log if there were changes
+	if len(changes) > 0 {
+		go CreateActivityLog(
+			models.ActivityEntityService,
+			body.ID,
+			body.Name,
+			models.ActivityActionUpdated,
+			changes,
+			userID,
+			userName,
+		)
+	}
+
+	// Create notification for critical status changes
+	if oldService.Status != body.Status && (body.Status == models.ServiceStatusError || body.Status == models.ServiceStatusStopped) {
+		go createNotificationForAllUsers(
+			models.NotificationTypeService,
+			models.SeverityCritical,
+			fmt.Sprintf("Service %s status changed to %s", body.Name, string(body.Status)),
+			fmt.Sprintf("Service %s (ID: %s) status changed from %s to %s", body.Name, body.ID, string(oldService.Status), string(body.Status)),
+			fmt.Sprintf(`{"serviceId":"%s","oldStatus":"%s","newStatus":"%s"}`, body.ID, string(oldService.Status), string(body.Status)),
+		)
+	}
+
 	return nil
 }
 
 // DeleteService deletes a service
-func DeleteService(serviceID string) error {
+func DeleteService(serviceID string, userID string, userName string) error {
 	db := DB
 	var err error
 	var ctx = context.Background()
@@ -288,6 +403,16 @@ func DeleteService(serviceID string) error {
 		}
 	}()
 
+	// Get service name before deletion
+	var serviceName string
+	err = tx.GetContext(ctx, &serviceName, "SELECT name FROM devices.service WHERE id = $1", serviceID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("Service not found")
+		}
+		return err
+	}
+
 	// Delete service
 	result, err := tx.ExecContext(ctx, "DELETE FROM devices.service WHERE id = $1", serviceID)
 	if err != nil {
@@ -305,6 +430,17 @@ func DeleteService(serviceID string) error {
 		err = errors.New("Transaction commit failed")
 		return err
 	}
+
+	// Create activity log after successful deletion
+	go CreateActivityLog(
+		models.ActivityEntityService,
+		serviceID,
+		serviceName,
+		models.ActivityActionDeleted,
+		[]models.ActivityChange{},
+		userID,
+		userName,
+	)
 
 	return nil
 }

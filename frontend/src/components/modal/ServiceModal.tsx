@@ -82,7 +82,9 @@ export default function ServiceModal({
       onSuccess();
       onClose();
     } catch {
-      toast.error(isEdit ? "Failed to update service" : "Failed to create service");
+      toast.error(
+        isEdit ? "Failed to update service" : "Failed to create service",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -149,7 +151,9 @@ export default function ServiceModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-semibold">Host Type</label>
+            <label className="mb-2 block text-sm font-semibold">
+              Host Type
+            </label>
             <BaseSelect
               value={formData.hostType}
               onChange={(val) =>

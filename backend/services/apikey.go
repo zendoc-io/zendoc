@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // GetAPIKeys retrieves all API keys for a user
@@ -95,6 +96,13 @@ func CreateAPIKey(body models.RCreateAPIKey, userID string) (string, error) {
 		return "", err
 	}
 
+	// Calculate expiration date from ExpiresInDays
+	var expiresAt *time.Time
+	if body.ExpiresInDays != nil && *body.ExpiresInDays > 0 {
+		expiryTime := time.Now().AddDate(0, 0, *body.ExpiresInDays)
+		expiresAt = &expiryTime
+	}
+
 	// Insert API key
 	query := `
 		INSERT INTO auth.api_keys (user_id, name, key_hash, key_prefix, permissions, expires_at)
@@ -107,7 +115,7 @@ func CreateAPIKey(body models.RCreateAPIKey, userID string) (string, error) {
 		keyHash,
 		prefix,
 		string(permissionsJSON),
-		body.ExpiresAt,
+		expiresAt,
 	)
 
 	if err != nil {
@@ -166,4 +174,79 @@ func RevokeAPIKey(keyID, userID string) error {
 	}
 
 	return nil
+}
+
+// ValidateAndUpdateAPIKey validates API key hash and updates last_used_at
+func ValidateAndUpdateAPIKey(keyHash string) (*models.APIKey, error) {
+	db := DB
+	var err error
+	var ctx = context.Background()
+
+	tx, err := db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Transaction failed: %v", err)
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Update and return API key in one query
+	query := `
+		UPDATE auth.api_keys
+		SET last_used_at = NOW(), updated_at = NOW()
+		WHERE key_hash = $1
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		RETURNING id, user_id, name, key_hash, key_prefix, permissions, 
+		          last_used_at, expires_at, created_at, updated_at
+	`
+
+	var apiKey models.APIKey
+	var permissionsJSON []byte
+	var lastUsedAt sql.NullTime
+	var expiresAt sql.NullTime
+	var updatedAt time.Time
+
+	err = tx.QueryRowContext(ctx, query, keyHash).Scan(
+		&apiKey.ID,
+		&apiKey.UserID,
+		&apiKey.Name,
+		&apiKey.KeyHash,
+		&apiKey.KeyPrefix,
+		&permissionsJSON,
+		&lastUsedAt,
+		&expiresAt,
+		&apiKey.CreatedAt,
+		&updatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("Invalid or expired API key")
+		} else {
+			err = fmt.Errorf("Failed to validate API key: %v", err)
+		}
+		return nil, err
+	}
+
+	// Parse permissions JSONB
+	apiKey.Permissions = string(permissionsJSON)
+	apiKey.LastUsedAt = lastUsedAt
+	apiKey.ExpiresAt = expiresAt
+	apiKey.UpdatedAt = updatedAt
+
+	if err = tx.Commit(); err != nil {
+		err = errors.New("Transaction commit failed")
+		return nil, err
+	}
+
+	return &apiKey, nil
 }

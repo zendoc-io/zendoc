@@ -5,6 +5,7 @@ type Props = {
   description: string;
   link: string;
   icon: React.ReactNode;
+  onClose: () => void;
 };
 
 export default function SearchResultEntity({
@@ -12,10 +13,12 @@ export default function SearchResultEntity({
   description,
   link,
   icon,
+  onClose,
 }: Props) {
   return (
     <Link
       href={link}
+      onClick={onClose}
       className="flex w-full items-center gap-2 rounded-lg p-3 transition-colors duration-100 hover:bg-gray-700"
     >
       <div className="flex aspect-square h-10 w-10 items-center justify-center rounded-full bg-gray-600">

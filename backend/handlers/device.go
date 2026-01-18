@@ -98,13 +98,16 @@ func CreateDeviceServer(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserId)
+
 	var requestBody models.RCreateDeviceServer
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
 
-	err := services.CreateDeviceServer(requestBody, sUserId)
+	err := services.CreateDeviceServer(requestBody, sUserId, userName)
 
 	if err != nil {
 		switch err.Error() {
@@ -127,13 +130,16 @@ func UpdateDeviceServer(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserId)
+
 	var requestBody models.RUpdateDeviceServer
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
 
-	err := services.UpdateDeviceServer(requestBody, sUserId)
+	err := services.UpdateDeviceServer(requestBody, sUserId, userName)
 
 	if err != nil {
 		switch err.Error() {
@@ -186,13 +192,16 @@ func DeleteDeviceServer(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserID)
+
 	serverID := c.Param("id")
 	if serverID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Server ID required"})
 		return
 	}
 
-	err := services.DeleteDeviceServer(serverID)
+	err := services.DeleteDeviceServer(serverID, sUserID, userName)
 	if err != nil {
 		switch err.Error() {
 		case "Server not found":

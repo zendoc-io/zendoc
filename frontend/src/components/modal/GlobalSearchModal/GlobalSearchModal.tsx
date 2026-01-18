@@ -145,6 +145,7 @@ export default function GlobalSearchModal({ onClose }: Props) {
                     )
                   }
                   link={result.link}
+                  onClose={onClose}
                 />
               ))}
             </SearchResultCategory>

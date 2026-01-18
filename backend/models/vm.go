@@ -1,25 +1,24 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 )
 
 type VM struct {
-	ID           string         `db:"id" json:"id"`
-	Name         string         `db:"name" json:"name"`
-	Status       VMStatus       `db:"status" json:"status"`
-	HostServerID string         `db:"host_server_id" json:"hostServerId"`
-	VCPU         int16          `db:"vcpu" json:"vcpu"`
-	RAMGB        int16          `db:"ram_gb" json:"ramGb"`
-	DiskGB       int32          `db:"disk_gb" json:"diskGb"`
-	OsID         string         `db:"os_id" json:"osId"`
-	IP           sql.NullString `db:"ip" json:"ip,omitempty"`
-	SubnetID     sql.NullString `db:"subnet_id" json:"subnetId,omitempty"`
-	CreatedAt    time.Time      `db:"created_at" json:"createdAt"`
-	UpdatedAt    time.Time      `db:"updated_at" json:"updatedAt"`
-	CreatedBy    string         `db:"created_by" json:"createdBy"`
-	UpdatedBy    string         `db:"updated_by" json:"updatedBy"`
+	ID           string     `db:"id" json:"id"`
+	Name         string     `db:"name" json:"name"`
+	Status       VMStatus   `db:"status" json:"status"`
+	HostServerID string     `db:"host_server_id" json:"hostServerId"`
+	VCPU         int16      `db:"vcpu" json:"vcpu"`
+	RAMGB        int16      `db:"ram_gb" json:"ramGb"`
+	DiskGB       int32      `db:"disk_gb" json:"diskGb"`
+	OsID         string     `db:"os_id" json:"osId"`
+	IP           NullString `db:"ip" json:"ip,omitempty"`
+	SubnetID     NullString `db:"subnet_id" json:"subnetId,omitempty"`
+	CreatedAt    time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt    time.Time  `db:"updated_at" json:"updatedAt"`
+	CreatedBy    string     `db:"created_by" json:"createdBy"`
+	UpdatedBy    string     `db:"updated_by" json:"updatedBy"`
 }
 
 type VMStatus string
@@ -35,10 +34,10 @@ const (
 // VMSearchReturn includes joined data from related tables
 type VMSearchReturn struct {
 	VM
-	HostServerName string         `db:"host_server_name" json:"hostServerName"`
-	OsName         string         `db:"os_name" json:"osName"`
-	SubnetName     sql.NullString `db:"subnet_name" json:"subnetName,omitempty"`
-	ServiceCount   int            `db:"service_count" json:"serviceCount"`
+	HostServerName string     `db:"host_server_name" json:"hostServerName"`
+	OsName         string     `db:"os_name" json:"osName"`
+	SubnetName     NullString `db:"subnet_name" json:"subnetName,omitempty"`
+	ServiceCount   int        `db:"service_count" json:"serviceCount"`
 }
 
 // Request types

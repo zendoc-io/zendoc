@@ -250,7 +250,7 @@ func AssignDeviceRole(body models.RAssignDeviceRole) error {
 	return err
 }
 
-func CreateDeviceServer(body models.RCreateDeviceServer, userId string) error {
+func CreateDeviceServer(body models.RCreateDeviceServer, userId string, userName string) error {
 	db := DB
 	var err error
 
@@ -272,7 +272,8 @@ func CreateDeviceServer(body models.RCreateDeviceServer, userId string) error {
 		}
 	}()
 
-	_, err = tx.Exec("INSERT INTO devices.server (name, status, ip, subnet_id, os_id, created_by, updated_by) VALUES ($1, $2, $3, $4, $5, $6, $6)", body.Name, body.Status, body.IP, body.SubnetID, body.OsID, userId)
+	var serverID string
+	err = tx.QueryRowContext(ctx, "INSERT INTO devices.server (name, status, ip, subnet_id, os_id, created_by, updated_by) VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING id", body.Name, body.Status, body.IP, body.SubnetID, body.OsID, userId).Scan(&serverID)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
 			err = errors.New("This device IP is already registered in this subnet!")
@@ -285,10 +286,21 @@ func CreateDeviceServer(body models.RCreateDeviceServer, userId string) error {
 		return err
 	}
 
+	// Create activity log after successful commit
+	go CreateActivityLog(
+		models.ActivityEntityServer,
+		serverID,
+		body.Name,
+		models.ActivityActionCreated,
+		[]models.ActivityChange{},
+		userId,
+		userName,
+	)
+
 	return err
 }
 
-func UpdateDeviceServer(body models.RUpdateDeviceServer, userId string) error {
+func UpdateDeviceServer(body models.RUpdateDeviceServer, userId string, userName string) error {
 	db := DB
 	var err error
 
@@ -309,6 +321,22 @@ func UpdateDeviceServer(body models.RUpdateDeviceServer, userId string) error {
 			tx.Rollback()
 		}
 	}()
+
+	// Get old values before update
+	var oldServer struct {
+		Name     string              `db:"name"`
+		Status   models.ServerStatus `db:"status"`
+		IP       string              `db:"ip"`
+		SubnetID string              `db:"subnet_id"`
+		OsID     string              `db:"os_id"`
+	}
+	err = tx.GetContext(ctx, &oldServer, "SELECT name, status, ip::text, subnet_id, os_id FROM devices.server WHERE id = $1", body.ServerID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("Server not found")
+		}
+		return err
+	}
 
 	_, err = tx.Exec("UPDATE devices.server SET name=$1, status=$2, ip=$3, subnet_id=$4, os_id=$5, updated_by=$6 WHERE id=$7", body.Name, body.Status, body.IP, body.SubnetID, body.OsID, userId, body.ServerID)
 	if err != nil {
@@ -321,6 +349,68 @@ func UpdateDeviceServer(body models.RUpdateDeviceServer, userId string) error {
 	if err = tx.Commit(); err != nil {
 		err = errors.New("Transaction commit failed!")
 		return err
+	}
+
+	// Track changes
+	changes := []models.ActivityChange{}
+	if oldServer.Name != body.Name {
+		changes = append(changes, models.ActivityChange{
+			Field:    "name",
+			OldValue: oldServer.Name,
+			NewValue: body.Name,
+		})
+	}
+	if oldServer.Status != body.Status {
+		changes = append(changes, models.ActivityChange{
+			Field:    "status",
+			OldValue: string(oldServer.Status),
+			NewValue: string(body.Status),
+		})
+	}
+	if oldServer.IP != body.IP {
+		changes = append(changes, models.ActivityChange{
+			Field:    "ip",
+			OldValue: oldServer.IP,
+			NewValue: body.IP,
+		})
+	}
+	if oldServer.SubnetID != body.SubnetID {
+		changes = append(changes, models.ActivityChange{
+			Field:    "subnet_id",
+			OldValue: oldServer.SubnetID,
+			NewValue: body.SubnetID,
+		})
+	}
+	if oldServer.OsID != body.OsID {
+		changes = append(changes, models.ActivityChange{
+			Field:    "os_id",
+			OldValue: oldServer.OsID,
+			NewValue: body.OsID,
+		})
+	}
+
+	// Create activity log if there were changes
+	if len(changes) > 0 {
+		go CreateActivityLog(
+			models.ActivityEntityServer,
+			body.ServerID,
+			body.Name,
+			models.ActivityActionUpdated,
+			changes,
+			userId,
+			userName,
+		)
+	}
+
+	// Create notification for critical status changes
+	if oldServer.Status != body.Status && (body.Status == models.ServerStatusInactive || body.Status == models.ServerStatusDecommissioned) {
+		go createNotificationForAllUsers(
+			models.NotificationTypeServer,
+			models.SeverityCritical,
+			fmt.Sprintf("Server %s status changed to %s", body.Name, string(body.Status)),
+			fmt.Sprintf("Server %s (ID: %s) status changed from %s to %s", body.Name, body.ServerID, string(oldServer.Status), string(body.Status)),
+			fmt.Sprintf(`{"serverId":"%s","oldStatus":"%s","newStatus":"%s"}`, body.ServerID, string(oldServer.Status), string(body.Status)),
+		)
 	}
 
 	return err
@@ -345,8 +435,35 @@ func GetServerByID(serverID string) (models.DeviceSearchReturn, error) {
 	return server, nil
 }
 
+// createNotificationForAllUsers creates a notification for all users in the system
+func createNotificationForAllUsers(notifType models.NotificationType, severity models.NotificationSeverity, title, message, metadata string) {
+	db := DB
+	var ctx = context.Background()
+
+	// Get all user IDs
+	var userIDs []string
+	err := db.SelectContext(ctx, &userIDs, "SELECT id FROM auth.users")
+	if err != nil {
+		// Log error but don't fail the main operation
+		fmt.Printf("Failed to get users for notification: %v\n", err)
+		return
+	}
+
+	// Create notification for each user
+	for _, userID := range userIDs {
+		_ = CreateNotification(models.RCreateNotification{
+			UserID:   userID,
+			Type:     notifType,
+			Severity: severity,
+			Title:    title,
+			Message:  message,
+			Metadata: metadata,
+		})
+	}
+}
+
 // DeleteDeviceServer deletes a server by ID
-func DeleteDeviceServer(serverID string) error {
+func DeleteDeviceServer(serverID string, userId string, userName string) error {
 	db := DB
 	var err error
 	var ctx = context.Background()
@@ -367,6 +484,16 @@ func DeleteDeviceServer(serverID string) error {
 			tx.Rollback()
 		}
 	}()
+
+	// Get server name before deletion
+	var serverName string
+	err = tx.GetContext(ctx, &serverName, "SELECT name FROM devices.server WHERE id = $1", serverID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("Server not found")
+		}
+		return err
+	}
 
 	// Check if server has VMs (ON DELETE RESTRICT)
 	var vmCount int
@@ -395,6 +522,17 @@ func DeleteDeviceServer(serverID string) error {
 		err = errors.New("Transaction commit failed!")
 		return err
 	}
+
+	// Create activity log after successful deletion
+	go CreateActivityLog(
+		models.ActivityEntityServer,
+		serverID,
+		serverName,
+		models.ActivityActionDeleted,
+		[]models.ActivityChange{},
+		userId,
+		userName,
+	)
 
 	return nil
 }

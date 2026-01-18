@@ -73,13 +73,16 @@ func CreateService(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserID)
+
 	var requestBody models.RCreateService
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
 
-	err := services.CreateService(requestBody, sUserID)
+	err := services.CreateService(requestBody, sUserID, userName)
 	if err != nil {
 		switch err.Error() {
 		case "Host not found":
@@ -103,13 +106,16 @@ func UpdateService(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserID)
+
 	var requestBody models.RUpdateService
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
 
-	err := services.UpdateService(requestBody, sUserID)
+	err := services.UpdateService(requestBody, sUserID, userName)
 	if err != nil {
 		switch err.Error() {
 		case "Service not found":
@@ -133,13 +139,16 @@ func DeleteService(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserID)
+
 	serviceID := c.Param("id")
 	if serviceID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Service ID required"})
 		return
 	}
 
-	err := services.DeleteService(serviceID)
+	err := services.DeleteService(serviceID, sUserID, userName)
 	if err != nil {
 		if err.Error() == "Service not found" {
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})

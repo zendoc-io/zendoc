@@ -29,7 +29,7 @@ export function useAPIKeys() {
 export async function createAPIKey(keyData: {
   name: string;
   permissions: string[];
-  expiresAt?: string;
+  expiresInDays?: number;
 }) {
   return apiFetch<ApiResponse<{ key: string }>>("/user/api-keys", {
     method: "POST",

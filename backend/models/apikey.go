@@ -32,9 +32,10 @@ type APIKeyReturn struct {
 // Request types
 
 type RCreateAPIKey struct {
-	Name        string   `json:"name" binding:"required"`
-	Permissions []string `json:"permissions"`
-	ExpiresAt   *string  `json:"expiresAt"` // Optional expiration date
+	Name          string   `json:"name" binding:"required"`
+	Permissions   []string `json:"permissions"`
+	ExpiresInDays *int     `json:"expiresInDays"` // Optional: 30, 60, 90, 120, or null
+	ExpiresAt     *string  `json:"expiresAt"`     // Computed from ExpiresInDays
 }
 
 type RRevokeAPIKey struct {

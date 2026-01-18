@@ -15,6 +15,8 @@ import NotificationIndicator from "@/components/NotificationIndicator";
 import GlobalSearchModal from "@/components/modal/GlobalSearchModal/GlobalSearchModal";
 import Link from "next/link";
 import { apiFetch } from "@/utils/api";
+import { useNotifications, useUnreadCount, markAllAsRead } from "@/hooks/useNotifications";
+import { formatDistanceToNow } from "date-fns";
 
 type Props = {
   children: React.ReactNode;
@@ -28,80 +30,9 @@ export default function AuthenticatedLayout({ children }: Props) {
   const notificationsRef = React.useRef<HTMLDivElement>(null);
   const userMenuRef = React.useRef<HTMLDivElement>(null);
   
-  const [notifications, setNotifications] = React.useState([
-    {
-      id: 1,
-      title: "New server has been detected",
-      description: "IP: 192.168.69.42, assign it now",
-      link: "/servers",
-      type: "info",
-      read: false,
-      timestamp: new Date(),
-    },
-    {
-      id: 2,
-      title: "New server has been detected",
-      description: "IP: 192.168.69.42, assign it now",
-      type: "info",
-      link: "/servers",
-      read: true,
-      timestamp: new Date(),
-    },
-    {
-      id: 3,
-      title: "New server has been detected",
-      description: "IP: 192.168.69.42, assign it now",
-      link: "/servers",
-      type: "info",
-      read: false,
-      timestamp: new Date(),
-    },
-    {
-      id: 4,
-      title: "New server has been detected",
-      description: "IP: 192.168.69.42, assign it now",
-      type: "info",
-      link: "/servers",
-      read: true,
-      timestamp: new Date(),
-    },
-    {
-      id: 5,
-      title: "New server has been detected",
-      description: "IP: 192.168.69.42, assign it now",
-      link: "/servers",
-      type: "info",
-      read: false,
-      timestamp: new Date(),
-    },
-    {
-      id: 6,
-      title: "New server has been detected",
-      description: "IP: 192.168.69.42, assign it now",
-      type: "info",
-      link: "/servers",
-      read: true,
-      timestamp: new Date(),
-    },
-  ]);
-
-  const filteredNotifications = React.useMemo(() => {
-    return notifications
-      .sort((a, b) => {
-        if (a.timestamp > b.timestamp) {
-          return -1;
-        }
-        if (a.timestamp < b.timestamp) {
-          return 1;
-        }
-        return 0;
-      })
-      .slice(0, 4);
-  }, [notifications]);
-
-  const unreadNotifications = React.useMemo(() => {
-    return notifications.filter((notification) => !notification.read);
-  }, [notifications]);
+  // Fetch real notifications data
+  const { count: unreadCountValue } = useUnreadCount();
+  const { notifications, mutate } = useNotifications({ limit: 5, unread: true });
 
   // Click-outside handler for notifications dropdown
   React.useEffect(() => {
@@ -172,14 +103,14 @@ export default function AuthenticatedLayout({ children }: Props) {
     },
   ];
 
-  function markAsRead(notificationIds: number[]) {
-    setNotifications((prevNotifications) =>
-      prevNotifications.map((notification) =>
-        notificationIds.includes(notification.id)
-          ? { ...notification, read: true }
-          : notification,
-      ),
-    );
+  async function handleMarkAllAsRead() {
+    try {
+      await markAllAsRead();
+      // Refresh the notifications data
+      mutate();
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
   }
 
   async function logout() {
@@ -209,50 +140,52 @@ export default function AuthenticatedLayout({ children }: Props) {
             type="icon"
             onClick={() => setShowNotifications(!showNotifications)}
           />
-          {unreadNotifications.length > 0 && (
-            <NotificationIndicator count={unreadNotifications.length} />
+          {unreadCountValue > 0 && (
+            <NotificationIndicator count={unreadCountValue} />
           )}
           {showNotifications && (
             <div className="absolute top-11 right-0 w-80 rounded-lg border border-gray-700 bg-gray-800 text-left text-sm">
               <div className="flex items-center justify-between border-b border-gray-700 px-4 py-2">
                 <span className="text-xs text-gray-500">
-                  {unreadNotifications.length} unread
+                  {unreadCountValue} unread
                 </span>
                 <BaseButton
                   type="icon"
                   className="text-xs font-semibold"
-                  onClick={() =>
-                    markAsRead(unreadNotifications.map((n) => n.id))
-                  }
+                  onClick={handleMarkAllAsRead}
                 >
                   Mark all as read
                 </BaseButton>
               </div>
-              {filteredNotifications.map((notification) => (
-                <Link
-                  key={notification.id}
-                  href={notification.link}
-                  className={`group block border-b border-gray-700 p-4 transition-colors hover:bg-gray-700`}
-                >
-                  <div className="flex justify-between">
-                    <span className="text-green text-xs uppercase">
-                      {notification.type}
+              {notifications.length > 0 ? (
+                notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`group block border-b border-gray-700 p-4 transition-colors hover:bg-gray-700`}
+                  >
+                    <div className="flex justify-between">
+                      <span className="text-green text-xs uppercase">
+                        {notification.type}
+                      </span>
+                      <span
+                        className={`h-2 w-2 rounded-full ${notification.isRead ? "bg-gray-700" : "bg-red"}`}
+                      ></span>
+                    </div>
+                    <p className="font-medium">{notification.title}</p>
+                    <span className="text-gray-500">
+                      {notification.message}
                     </span>
-                    <span
-                      className={`h-2 w-2 rounded-full ${notification.read ? "bg-gray-700" : "bg-red"
-                        }`}
-                    ></span>
+                    <br />
+                    <span className="text-xs text-gray-500">
+                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                    </span>
                   </div>
-                  <p>{notification.title}</p>
-                  <span className="text-gray-500">
-                    {notification.description}
-                  </span>
-                  <br />
-                  <span className="text-xs text-gray-500">
-                    {notification.timestamp.toLocaleString()}
-                  </span>
-                </Link>
-              ))}
+                ))
+              ) : (
+                <div className="p-4 text-center text-gray-500">
+                  No unread notifications
+                </div>
+              )}
               <div className="p-4">
                 <BaseButton
                   type="icon"

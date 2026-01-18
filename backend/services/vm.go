@@ -143,7 +143,7 @@ func GetVMByID(vmID string) (models.VMSearchReturn, error) {
 }
 
 // CreateVM creates a new virtual machine
-func CreateVM(body models.RCreateVM, userID string) error {
+func CreateVM(body models.RCreateVM, userID string, userName string) error {
 	db := DB
 	var err error
 	var ctx = context.Background()
@@ -186,9 +186,11 @@ func CreateVM(body models.RCreateVM, userID string) error {
 		INSERT INTO devices.vm (
 			name, status, host_server_id, vcpu, ram_gb, disk_gb, os_id, ip, subnet_id, created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		RETURNING id
 	`
 
-	_, err = tx.ExecContext(ctx, query,
+	var vmID string
+	err = tx.QueryRowContext(ctx, query,
 		body.Name,
 		body.Status,
 		body.HostServerID,
@@ -200,7 +202,7 @@ func CreateVM(body models.RCreateVM, userID string) error {
 		body.SubnetID,
 		userID,
 		userID,
-	)
+	).Scan(&vmID)
 
 	if err != nil {
 		err = errors.New("Failed to create VM")
@@ -212,11 +214,22 @@ func CreateVM(body models.RCreateVM, userID string) error {
 		return err
 	}
 
+	// Create activity log after successful commit
+	go CreateActivityLog(
+		models.ActivityEntityVM,
+		vmID,
+		body.Name,
+		models.ActivityActionCreated,
+		[]models.ActivityChange{},
+		userID,
+		userName,
+	)
+
 	return nil
 }
 
 // UpdateVM updates an existing virtual machine
-func UpdateVM(body models.RUpdateVM, userID string) error {
+func UpdateVM(body models.RUpdateVM, userID string, userName string) error {
 	db := DB
 	var err error
 	var ctx = context.Background()
@@ -238,11 +251,23 @@ func UpdateVM(body models.RUpdateVM, userID string) error {
 		}
 	}()
 
-	// Verify VM exists
-	var vmExists bool
-	err = tx.GetContext(ctx, &vmExists, "SELECT EXISTS(SELECT 1 FROM devices.vm WHERE id = $1)", body.ID)
-	if err != nil || !vmExists {
-		err = errors.New("VM not found")
+	// Get old values before update
+	var oldVM struct {
+		Name         string          `db:"name"`
+		Status       models.VMStatus `db:"status"`
+		HostServerID string          `db:"host_server_id"`
+		VCPU         int16           `db:"vcpu"`
+		RAMGB        int16           `db:"ram_gb"`
+		DiskGB       int32           `db:"disk_gb"`
+		OsID         string          `db:"os_id"`
+		IP           sql.NullString  `db:"ip"`
+		SubnetID     sql.NullString  `db:"subnet_id"`
+	}
+	err = tx.GetContext(ctx, &oldVM, "SELECT name, status, host_server_id, vcpu, ram_gb, disk_gb, os_id, ip::text, subnet_id FROM devices.vm WHERE id = $1", body.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("VM not found")
+		}
 		return err
 	}
 
@@ -285,11 +310,119 @@ func UpdateVM(body models.RUpdateVM, userID string) error {
 		return err
 	}
 
+	// Track changes
+	changes := []models.ActivityChange{}
+	if oldVM.Name != body.Name {
+		changes = append(changes, models.ActivityChange{
+			Field:    "name",
+			OldValue: oldVM.Name,
+			NewValue: body.Name,
+		})
+	}
+	if oldVM.Status != body.Status {
+		changes = append(changes, models.ActivityChange{
+			Field:    "status",
+			OldValue: string(oldVM.Status),
+			NewValue: string(body.Status),
+		})
+	}
+	if oldVM.HostServerID != body.HostServerID {
+		changes = append(changes, models.ActivityChange{
+			Field:    "host_server_id",
+			OldValue: oldVM.HostServerID,
+			NewValue: body.HostServerID,
+		})
+	}
+	if oldVM.VCPU != body.VCPU {
+		changes = append(changes, models.ActivityChange{
+			Field:    "vcpu",
+			OldValue: oldVM.VCPU,
+			NewValue: body.VCPU,
+		})
+	}
+	if oldVM.RAMGB != body.RAMGB {
+		changes = append(changes, models.ActivityChange{
+			Field:    "ram_gb",
+			OldValue: oldVM.RAMGB,
+			NewValue: body.RAMGB,
+		})
+	}
+	if oldVM.DiskGB != body.DiskGB {
+		changes = append(changes, models.ActivityChange{
+			Field:    "disk_gb",
+			OldValue: oldVM.DiskGB,
+			NewValue: body.DiskGB,
+		})
+	}
+	if oldVM.OsID != body.OsID {
+		changes = append(changes, models.ActivityChange{
+			Field:    "os_id",
+			OldValue: oldVM.OsID,
+			NewValue: body.OsID,
+		})
+	}
+	// Compare IP (handle sql.NullString properly)
+	oldIPStr := ""
+	newIPStr := ""
+	if oldVM.IP.Valid {
+		oldIPStr = oldVM.IP.String
+	}
+	if body.IP != nil {
+		newIPStr = *body.IP
+	}
+	if oldIPStr != newIPStr {
+		changes = append(changes, models.ActivityChange{
+			Field:    "ip",
+			OldValue: oldIPStr,
+			NewValue: newIPStr,
+		})
+	}
+	// Compare SubnetID (handle sql.NullString properly)
+	oldSubnetStr := ""
+	newSubnetStr := ""
+	if oldVM.SubnetID.Valid {
+		oldSubnetStr = oldVM.SubnetID.String
+	}
+	if body.SubnetID != nil {
+		newSubnetStr = *body.SubnetID
+	}
+	if oldSubnetStr != newSubnetStr {
+		changes = append(changes, models.ActivityChange{
+			Field:    "subnet_id",
+			OldValue: oldSubnetStr,
+			NewValue: newSubnetStr,
+		})
+	}
+
+	// Create activity log if there were changes
+	if len(changes) > 0 {
+		go CreateActivityLog(
+			models.ActivityEntityVM,
+			body.ID,
+			body.Name,
+			models.ActivityActionUpdated,
+			changes,
+			userID,
+			userName,
+		)
+	}
+
+	// Create notification for critical status changes
+	if oldVM.Status != body.Status && (body.Status == models.VMStatusError || body.Status == models.VMStatusStopped) {
+		go createNotificationForAllUsers(
+			models.NotificationTypeVM,
+			models.SeverityCritical,
+			fmt.Sprintf("VM %s status changed to %s", body.Name, string(body.Status)),
+			fmt.Sprintf("VM %s (ID: %s) status changed from %s to %s", body.Name, body.ID, string(oldVM.Status), string(body.Status)),
+			fmt.Sprintf(`{"vmId":"%s","oldStatus":"%s","newStatus":"%s"}`, body.ID, string(oldVM.Status), string(body.Status)),
+		)
+	}
+
 	return nil
 }
 
 // DeleteVM deletes a virtual machine
-func DeleteVM(vmID string) error {
+func DeleteVM(vmID string, userID string, userName string) error {
 	db := DB
 	var err error
 	var ctx = context.Background()
@@ -311,6 +444,16 @@ func DeleteVM(vmID string) error {
 		}
 	}()
 
+	// Get VM name before deletion
+	var vmName string
+	err = tx.GetContext(ctx, &vmName, "SELECT name FROM devices.vm WHERE id = $1", vmID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err = errors.New("VM not found")
+		}
+		return err
+	}
+
 	// Delete VM (CASCADE will handle vm_service)
 	result, err := tx.ExecContext(ctx, "DELETE FROM devices.vm WHERE id = $1", vmID)
 	if err != nil {
@@ -328,6 +471,17 @@ func DeleteVM(vmID string) error {
 		err = errors.New("Transaction commit failed")
 		return err
 	}
+
+	// Create activity log after successful deletion
+	go CreateActivityLog(
+		models.ActivityEntityVM,
+		vmID,
+		vmName,
+		models.ActivityActionDeleted,
+		[]models.ActivityChange{},
+		userID,
+		userName,
+	)
 
 	return nil
 }

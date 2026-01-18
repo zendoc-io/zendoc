@@ -73,13 +73,16 @@ func CreateVM(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserID)
+
 	var requestBody models.RCreateVM
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
 
-	err := services.CreateVM(requestBody, sUserID)
+	err := services.CreateVM(requestBody, sUserID, userName)
 	if err != nil {
 		switch err.Error() {
 		case "Host server not found":
@@ -105,13 +108,16 @@ func UpdateVM(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserID)
+
 	var requestBody models.RUpdateVM
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "Invalid arguments!"})
 		return
 	}
 
-	err := services.UpdateVM(requestBody, sUserID)
+	err := services.UpdateVM(requestBody, sUserID, userName)
 	if err != nil {
 		switch err.Error() {
 		case "VM not found":
@@ -135,13 +141,16 @@ func DeleteVM(c *gin.Context) {
 		return
 	}
 
+	// Get user name for activity logging
+	userName, _ := services.GetUserName(sUserID)
+
 	vmID := c.Param("id")
 	if vmID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "VM ID required"})
 		return
 	}
 
-	err := services.DeleteVM(vmID)
+	err := services.DeleteVM(vmID, sUserID, userName)
 	if err != nil {
 		if err.Error() == "VM not found" {
 			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})

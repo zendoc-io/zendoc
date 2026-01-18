@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -15,7 +13,8 @@ import {
 import { useServers } from "@/hooks/useServers";
 import { useVMs } from "@/hooks/useVMs";
 import { useServices } from "@/hooks/useServices";
-import { useNotifications, useNotificationsPaginated, Notification } from "@/hooks/useNotifications";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useRecentActivity } from "@/hooks/useActivity";
 import { useMemo } from "react";
 import ServerIcon from "@/../public/icons/server.svg";
 import VmIcon from "@/../public/icons/vm.svg";
@@ -29,12 +28,7 @@ export default function Home() {
   const { vms, isLoading: isLoadingVMs, isError: vmsError } = useVMs();
   const { services, isLoading: isLoadingServices, isError: servicesError } = useServices();
   const { notifications, isLoading: isLoadingNotifications, isError: notificationsError } = useNotifications({ unread: true });
-  const {
-    notifications: activityNotifications,
-    loadMore,
-    hasMore,
-    isLoading: isLoadingActivity,
-  } = useNotificationsPaginated(10);
+  const { activities, isLoading: isLoadingActivity, isError: activityError } = useRecentActivity(10);
 
   console.log('Dashboard Debug:', {
     servers: { count: servers.length, data: servers, loading: isLoadingServers, error: serversError },
@@ -104,19 +98,6 @@ export default function Home() {
       href: "/user/notifications",
     },
   ];
-
-  const getSeverityColors = (severity: "critical" | "warning" | "info") => {
-    switch (severity) {
-      case "critical":
-        return "bg-red-500/20 border-red-500/30";
-      case "warning":
-        return "bg-yellow-500/20 border-yellow-500/30";
-      case "info":
-        return "bg-blue-500/20 border-blue-500/30";
-      default:
-        return "bg-gray-500/20 border-gray-500/30";
-    }
-  };
 
   const formatTimestamp = (dateString: string) => {
     const date = new Date(dateString);
@@ -234,43 +215,81 @@ export default function Home() {
         <div className="rounded-lg border border-gray-700 bg-gray-800 p-6">
           <h2 className="mb-4 text-xl">Recent Activity</h2>
           <div className="max-h-80 space-y-3 overflow-y-auto">
-            {isLoadingActivity && activityNotifications.length === 0 ? (
+            {isLoadingActivity ? (
               <div className="p-4 text-center text-gray-500">
                 Loading activity...
               </div>
-            ) : activityNotifications.length === 0 ? (
+            ) : activityError ? (
+              <div className="p-4 text-center text-gray-500">
+                Failed to load activity
+              </div>
+            ) : activities.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 No recent activity
               </div>
             ) : (
-              <>
-                {activityNotifications.map((notification: Notification) => (
+              activities.map((activity) => {
+                const actionColors: Record<string, string> = {
+                  CREATED: "border-green-500/20 bg-green-500/10",
+                  UPDATED: "border-blue-500/20 bg-blue-500/10",
+                  DELETED: "border-red-500/20 bg-red-500/10",
+                  STATUS_CHANGED: "border-orange-500/20 bg-orange-500/10",
+                };
+                
+                const actionTextColors: Record<string, string> = {
+                  CREATED: "text-green-400",
+                  UPDATED: "text-blue-400",
+                  DELETED: "text-red-400",
+                  STATUS_CHANGED: "text-orange-400",
+                };
+                
+                const actionIcons: Record<string, string> = {
+                  CREATED: "+",
+                  UPDATED: "~",
+                  DELETED: "-",
+                  STATUS_CHANGED: "*",
+                };
+                
+                return (
                   <div
-                    key={notification.id}
-                    className={`flex items-start gap-3 rounded-lg border p-3 transition-colors duration-100 hover:bg-gray-700 ${getSeverityColors(notification.severity)}`}
+                    key={activity.id}
+                    className={`flex items-start gap-3 rounded-lg border p-3 transition-colors duration-100 hover:bg-gray-700 ${actionColors[activity.action] || "border-gray-700"}`}
                   >
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-700 text-xs font-bold ${actionTextColors[activity.action] || "text-gray-400"}`}
+                    >
+                      {actionIcons[activity.action] || "•"}
+                    </span>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold">
-                        {notification.title}
+                      <p className="text-sm">
+                        <span className="font-medium">{activity.userName || "System"}</span>{" "}
+                        <span className={actionTextColors[activity.action] || "text-gray-400"}>
+                          {activity.action.toLowerCase().replace("_", " ")}
+                        </span>{" "}
+                        {activity.entityType.toLowerCase()}{" "}
+                        <span className="font-medium">{activity.entityName}</span>
                       </p>
-                      <p className="text-sm text-gray-400">
-                        {notification.message}
-                      </p>
+                      {Array.isArray(activity.changes) && activity.changes.length > 0 && (
+                        <div className="mt-1 text-xs text-gray-400">
+                          {activity.changes.slice(0, 2).map((change, idx) => (
+                            <span key={idx}>
+                              {change.field}: {String(change.oldValue ?? "")} →{" "}
+                              {String(change.newValue ?? "")}
+                              {idx < Math.min(activity.changes.length - 1, 1) && ", "}
+                            </span>
+                          ))}
+                          {activity.changes.length > 2 && (
+                            <span> and {activity.changes.length - 2} more...</span>
+                          )}
+                        </div>
+                      )}
                       <span className="text-xs text-gray-500">
-                        {formatTimestamp(notification.createdAt)}
+                        {formatTimestamp(activity.createdAt)}
                       </span>
                     </div>
                   </div>
-                ))}
-                {hasMore && (
-                  <button
-                    onClick={loadMore}
-                    className="w-full rounded-lg border border-gray-700 p-2 text-sm text-gray-400 transition-colors duration-100 hover:bg-gray-700"
-                  >
-                    Load more
-                  </button>
-                )}
-              </>
+                );
+              })
             )}
           </div>
         </div>
