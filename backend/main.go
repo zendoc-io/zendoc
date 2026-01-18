@@ -32,5 +32,5 @@ func main() {
 
 	log.Println("Gin finished starting")
 
-	r.Run(":3000")
+	r.Run(":8080")
 }

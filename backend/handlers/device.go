@@ -145,5 +145,123 @@ func UpdateDeviceServer(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "Device role created successfully!"})
+	c.JSON(http.StatusOK, gin.H{"status": "Server updated successfully!"})
+}
+
+// GetServerByID handles GET /device/server/:id
+func GetServerByID(c *gin.Context) {
+	userID, exists := c.Get("userId")
+	sUserID, ok := userID.(string)
+	if !exists || !ok || sUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "Unauthorized"})
+		return
+	}
+
+	serverID := c.Param("id")
+	if serverID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "Server ID required"})
+		return
+	}
+
+	server, err := services.GetServerByID(serverID)
+	if err != nil {
+		if err.Error() == "Server not found" {
+			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
+			return
+		}
+		log.Printf("GetServerByID error: %v", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "data": server})
+}
+
+// DeleteDeviceServer handles DELETE /device/server/:id
+func DeleteDeviceServer(c *gin.Context) {
+	userID, exists := c.Get("userId")
+	sUserID, ok := userID.(string)
+	if !exists || !ok || sUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "Unauthorized"})
+		return
+	}
+
+	serverID := c.Param("id")
+	if serverID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "Server ID required"})
+		return
+	}
+
+	err := services.DeleteDeviceServer(serverID)
+	if err != nil {
+		switch err.Error() {
+		case "Server not found":
+			c.JSON(http.StatusNotFound, gin.H{"status": err.Error()})
+		case "Cannot delete server with existing VMs":
+			c.JSON(http.StatusConflict, gin.H{"status": err.Error()})
+		default:
+			log.Printf("DeleteDeviceServer error: %v", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// GetOSOptions handles GET /device/os
+func GetOSOptions(c *gin.Context) {
+	userID, exists := c.Get("userId")
+	sUserID, ok := userID.(string)
+	if !exists || !ok || sUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "Unauthorized"})
+		return
+	}
+
+	options, err := services.GetOSOptions()
+	if err != nil {
+		log.Printf("GetOSOptions error: %v", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "data": options})
+}
+
+// GetSubnetOptions handles GET /device/subnet
+func GetSubnetOptions(c *gin.Context) {
+	userID, exists := c.Get("userId")
+	sUserID, ok := userID.(string)
+	if !exists || !ok || sUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "Unauthorized"})
+		return
+	}
+
+	options, err := services.GetSubnetOptions()
+	if err != nil {
+		log.Printf("GetSubnetOptions error: %v", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "data": options})
+}
+
+// GetServerOptions handles GET /device/server/options
+func GetServerOptions(c *gin.Context) {
+	userID, exists := c.Get("userId")
+	sUserID, ok := userID.(string)
+	if !exists || !ok || sUserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "Unauthorized"})
+		return
+	}
+
+	options, err := services.GetServerOptions()
+	if err != nil {
+		log.Printf("GetServerOptions error: %v", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "Something went wrong!"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "data": options})
 }

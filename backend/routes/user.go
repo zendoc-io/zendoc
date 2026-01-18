@@ -9,4 +9,5 @@ import (
 
 func UserRoute(r *gin.Engine) {
 	r.GET("/user/search", middleware.CheckSession(), handlers.Search)
+	r.GET("/search", middleware.CheckSession(), handlers.GlobalSearch)
 }

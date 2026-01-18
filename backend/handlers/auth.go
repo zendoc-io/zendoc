@@ -58,7 +58,7 @@ func LoginPassword(c *gin.Context) {
 		Value:    data.RefreshToken,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   c.Request.TLS != nil,
 		Expires:  time.Now().Add(24 * time.Hour),
 		SameSite: http.SameSiteLaxMode,
 	}

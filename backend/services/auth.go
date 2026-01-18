@@ -300,6 +300,11 @@ func Me(uID string) (models.User, error) {
 		return data, err
 	}
 
+	uInformation[0].Email, err = Decrypt(uInformation[0].Email)
+	if err != nil {
+		return data, err
+	}
+
 	if err = tx.Commit(); err != nil {
 		err = errors.New("Transaction commit failed!")
 		return data, err

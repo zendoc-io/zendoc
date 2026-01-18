@@ -11,5 +11,10 @@ func SetupRoutes(r *gin.Engine) {
 	RoleRoute(r)
 	UserRoute(r)
 	DeviceRoutes(r)
+	VMRoutes(r)
+	ServiceRoutes(r)
+	NotificationRoutes(r)
+	APIKeyRoutes(r)
+	ActivityRoutes(r)
 	r.GET("/hello", handlers.Hello)
 }

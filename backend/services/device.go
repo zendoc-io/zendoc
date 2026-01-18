@@ -10,6 +10,54 @@ import (
 	"strings"
 )
 
+// FilterOption represents a simple id/name option for filters
+type FilterOption struct {
+	ID   string `db:"id" json:"id"`
+	Name string `db:"name" json:"name"`
+}
+
+// GetOSOptions retrieves all available OS options for filtering
+func GetOSOptions() ([]FilterOption, error) {
+	db := DB
+	var ctx = context.Background()
+
+	query := "SELECT id, name FROM devices.os ORDER BY name ASC"
+	var results []FilterOption
+	err := db.SelectContext(ctx, &results, query)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get OS options: %v", err)
+	}
+	return results, nil
+}
+
+// GetSubnetOptions retrieves all available subnet options for filtering
+func GetSubnetOptions() ([]FilterOption, error) {
+	db := DB
+	var ctx = context.Background()
+
+	query := "SELECT id, name FROM devices.subnet ORDER BY name ASC"
+	var results []FilterOption
+	err := db.SelectContext(ctx, &results, query)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get subnet options: %v", err)
+	}
+	return results, nil
+}
+
+// GetServerOptions retrieves all available server options for filtering (used for host selection)
+func GetServerOptions() ([]FilterOption, error) {
+	db := DB
+	var ctx = context.Background()
+
+	query := "SELECT id, name FROM devices.server ORDER BY name ASC"
+	var results []FilterOption
+	err := db.SelectContext(ctx, &results, query)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to get server options: %v", err)
+	}
+	return results, nil
+}
+
 var searchDeviceQuery = ` 
 SELECT
     s.id AS id,
@@ -276,4 +324,77 @@ func UpdateDeviceServer(body models.RUpdateDeviceServer, userId string) error {
 	}
 
 	return err
+}
+
+// GetServerByID retrieves a single server by ID
+func GetServerByID(serverID string) (models.DeviceSearchReturn, error) {
+	db := DB
+	var ctx = context.Background()
+	var server models.DeviceSearchReturn
+
+	query := searchDeviceQuery + " WHERE s.id = $1"
+
+	err := db.GetContext(ctx, &server, query, serverID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return server, errors.New("Server not found")
+		}
+		return server, fmt.Errorf("Failed to get server: %v", err)
+	}
+
+	return server, nil
+}
+
+// DeleteDeviceServer deletes a server by ID
+func DeleteDeviceServer(serverID string) error {
+	db := DB
+	var err error
+	var ctx = context.Background()
+
+	tx, err := db.BeginTxx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+		ReadOnly:  false,
+	})
+	if err != nil {
+		return fmt.Errorf("Transaction failed: %v", err)
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Check if server has VMs (ON DELETE RESTRICT)
+	var vmCount int
+	err = tx.GetContext(ctx, &vmCount, "SELECT COUNT(*) FROM devices.vm WHERE host_server_id = $1", serverID)
+	if err != nil {
+		return fmt.Errorf("Failed to check VMs: %v", err)
+	}
+	if vmCount > 0 {
+		err = errors.New("Cannot delete server with existing VMs")
+		return err
+	}
+
+	// Delete server (CASCADE will handle server_role and server_document)
+	result, err := tx.ExecContext(ctx, "DELETE FROM devices.server WHERE id = $1", serverID)
+	if err != nil {
+		return fmt.Errorf("Failed to delete server: %v", err)
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		err = errors.New("Server not found")
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		err = errors.New("Transaction commit failed!")
+		return err
+	}
+
+	return nil
 }
