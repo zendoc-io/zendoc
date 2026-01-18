@@ -21,10 +21,11 @@ func SearchVMs(params models.RSearchVMs) ([]models.VMSearchReturn, int, error) {
 		LEFT JOIN devices.os o ON v.os_id = o.id
 		LEFT JOIN devices.subnet sub ON v.subnet_id = sub.id
 		LEFT JOIN (
-			SELECT vm_id, COUNT(*) as service_count
-			FROM devices.vm_service
-			GROUP BY vm_id
-		) vs ON v.id = vs.vm_id
+			SELECT host_id, COUNT(*) as service_count
+			FROM devices.service
+			WHERE host_type = 'VM'
+			GROUP BY host_id
+		) vs ON v.id = vs.host_id
 		WHERE 1=1
 	`
 
@@ -123,10 +124,11 @@ func GetVMByID(vmID string) (models.VMSearchReturn, error) {
 		LEFT JOIN devices.os o ON v.os_id = o.id
 		LEFT JOIN devices.subnet sub ON v.subnet_id = sub.id
 		LEFT JOIN (
-			SELECT vm_id, COUNT(*) as service_count
-			FROM devices.vm_service
-			GROUP BY vm_id
-		) vs ON v.id = vs.vm_id
+			SELECT host_id, COUNT(*) as service_count
+			FROM devices.service
+			WHERE host_type = 'VM'
+			GROUP BY host_id
+		) vs ON v.id = vs.host_id
 		WHERE v.id = $1
 	`
 
