@@ -22,6 +22,12 @@ type Props = {
 
 export default function AuthenticatedLayout({ children }: Props) {
   const [showNotifications, setShowNotifications] = React.useState(false);
+  const [showUserMenu, setShowUserMenu] = React.useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = React.useState(false);
+  
+  const notificationsRef = React.useRef<HTMLDivElement>(null);
+  const userMenuRef = React.useRef<HTMLDivElement>(null);
+  
   const [notifications, setNotifications] = React.useState([
     {
       id: 1,
@@ -78,8 +84,6 @@ export default function AuthenticatedLayout({ children }: Props) {
       timestamp: new Date(),
     },
   ]);
-  const [showUserMenu, setShowUserMenu] = React.useState(false);
-  const [showGlobalSearch, setShowGlobalSearch] = React.useState(false);
 
   const filteredNotifications = React.useMemo(() => {
     return notifications
@@ -99,11 +103,51 @@ export default function AuthenticatedLayout({ children }: Props) {
     return notifications.filter((notification) => !notification.read);
   }, [notifications]);
 
+  // Click-outside handler for notifications dropdown
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setShowNotifications(false);
+      }
+    }
+
+    if (showNotifications) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNotifications]);
+
+  // Click-outside handler for user menu dropdown
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowUserMenu(false);
+      }
+    }
+
+    if (showUserMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showUserMenu]);
+
   const navLinks: NavLinkProps[] = [
     {
       icon: <DashboardIcon width={16} />,
       title: "Dashboard",
-      slug: "dashboard",
+      slug: "",
       subLinks: [],
     },
     {
@@ -140,7 +184,7 @@ export default function AuthenticatedLayout({ children }: Props) {
 
   async function logout() {
     try {
-      const data = await apiFetch("/auth/logout", {
+      await apiFetch("/auth/logout", {
         headers: {
           "Content-Type": "application/json",
         },
@@ -159,7 +203,7 @@ export default function AuthenticatedLayout({ children }: Props) {
         <GlobalSearchModal onClose={() => setShowGlobalSearch(false)} />
       )}
       <header className="fixed top-0 left-0 z-10 ml-52 flex h-16 w-[calc(100%-13rem)] items-center justify-end border-b border-gray-700 bg-gray-800">
-        <div className="relative mr-3">
+        <div className="relative mr-3" ref={notificationsRef}>
           <BaseButton
             icon={<BellIcon width={16} />}
             type="icon"
@@ -184,7 +228,7 @@ export default function AuthenticatedLayout({ children }: Props) {
                   Mark all as read
                 </BaseButton>
               </div>
-              {filteredNotifications.map((notification, index) => (
+              {filteredNotifications.map((notification) => (
                 <Link
                   key={notification.id}
                   href={notification.link}
@@ -221,7 +265,7 @@ export default function AuthenticatedLayout({ children }: Props) {
             </div>
           )}
         </div>
-        <div className="realative border-l border-gray-700">
+        <div className="realative border-l border-gray-700" ref={userMenuRef}>
           <BaseButton
             type="icon"
             icon={<UserIcon width={16} />}
@@ -259,7 +303,9 @@ export default function AuthenticatedLayout({ children }: Props) {
       </header>
       <aside className="fixed top-0 left-0 h-full w-52 border-r border-gray-700 bg-gray-800">
         <div className="mb-3 p-3">
-          <LogoIcon width={130} />
+          <Link href="/">
+            <LogoIcon width={130} className="cursor-pointer" />
+          </Link>
         </div>
         <div className="mb-3 px-3">
           <button

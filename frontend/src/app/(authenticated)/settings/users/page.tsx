@@ -6,10 +6,11 @@ import BaseButton from "@/components/BaseButton";
 import ChevronIcon from "@/../public/icons/chevron.svg";
 import TableViewIcon from "@/../public/icons/table-view.svg";
 import PencilIcon from "@/../public/icons/pencil.svg";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CellValue, TableHeader } from "@/components/Table/Table";
 import EditViewModal from "@/components/modal/EditViewModal";
 import BaseTable from "@/components/Table/BaseTable";
+import MobileTableWarning from "@/components/MobileTableWarning";
 
 export default function UserPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -135,12 +136,21 @@ export default function UserPage() {
           </BaseButton>
         </div>
       </div>
-      <div className="rounded-lg border border-gray-700">
-        <BaseTable
-          data={initialTableData}
-          headers={tableHeaders}
-          setTableHeaders={setTableHeaders}
-        />
+
+      {/* Desktop Table */}
+      <div className="hidden md:block">
+        <div className="rounded-lg border border-gray-700">
+          <BaseTable
+            data={initialTableData}
+            headers={tableHeaders}
+            setTableHeaders={setTableHeaders}
+          />
+        </div>
+      </div>
+
+      {/* Mobile Warning */}
+      <div className="md:hidden">
+        <MobileTableWarning />
       </div>
     </div>
   );

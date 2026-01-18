@@ -1,44 +1,46 @@
 "use client";
+
 import BaseInput from "@/components/inputs/BaseInput";
 import SearchIcon from "@/../public/icons/search.svg";
 import PlusIcon from "@/../public/icons/plus.svg";
+import BaseButton from "@/components/BaseButton";
+import ChevronIcon from "@/../public/icons/chevron.svg";
 import TableViewIcon from "@/../public/icons/table-view.svg";
 import PencilIcon from "@/../public/icons/pencil.svg";
-import ChevronIcon from "@/../public/icons/chevron.svg";
-import BaseButton from "@/components/BaseButton";
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { CellValue, TableHeader } from "@/components/Table/Table";
 import EditViewModal from "@/components/modal/EditViewModal";
 import BaseTable from "@/components/Table/BaseTable";
 import MobileTableWarning from "@/components/MobileTableWarning";
 import FilterDropdown from "@/components/FilterDropdown";
-import ServerModal from "@/components/modal/ServerModal";
-import { useServers } from "@/hooks/useServers";
+import ServiceModal from "@/components/modal/ServiceModal";
+import { useServices } from "@/hooks/useServices";
 import {
-  SERVER_STATUS_OPTIONS,
-  useOSOptions,
-  useSubnetOptions,
+  SERVICE_STATUS_OPTIONS,
+  SERVICE_TYPE_OPTIONS,
+  SERVICE_HEALTH_OPTIONS,
+  HOST_TYPE_OPTIONS,
 } from "@/hooks/useFilterOptions";
-import { serverToTableRow } from "@/utils/tableUtils";
+import { serviceToTableRow } from "@/utils/tableUtils";
 
-export default function ServerPage() {
+export default function ServicesPage() {
   const [isEditViewModalOpen, setIsEditViewModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [osFilter, setOsFilter] = useState<string[]>([]);
-  const [subnetFilter, setSubnetFilter] = useState<string[]>([]);
-
-  const { options: osOptions } = useOSOptions();
-  const { options: subnetOptions } = useSubnetOptions();
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [healthFilter, setHealthFilter] = useState<string[]>([]);
+  const [hostTypeFilter, setHostTypeFilter] = useState<string[]>([]);
 
   const [tableHeaders, setTableHeaders] = useState<TableHeader[]>([
     { key: "id", name: "ID", sort: null, show: false, type: "text" },
     { key: "name", name: "Name", sort: "asc", show: true, type: "link" },
+    { key: "type", name: "Type", sort: null, show: true, type: "box" },
     { key: "status", name: "Status", sort: null, show: true, type: "box" },
-    { key: "ip", name: "IP", sort: null, show: true, type: "text" },
-    { key: "subnet", name: "Subnet", sort: null, show: true, type: "text" },
-    { key: "os", name: "OS", sort: null, show: true, type: "text" },
+    { key: "host", name: "Host", sort: null, show: true, type: "link" },
+    { key: "port", name: "Port", sort: null, show: true, type: "text" },
+    { key: "protocol", name: "Protocol", sort: null, show: true, type: "text" },
+    { key: "health", name: "Health", sort: null, show: true, type: "box" },
   ]);
 
   // Build filters object
@@ -46,22 +48,39 @@ export default function ServerPage() {
     const f: Record<string, string> = {};
     if (searchQuery) f.name = searchQuery;
     if (statusFilter.length === 1) f.status = statusFilter[0];
-    if (osFilter.length === 1) f.os = osFilter[0];
-    if (subnetFilter.length === 1) f.subnet = subnetFilter[0];
+    if (typeFilter.length === 1) f.type = typeFilter[0];
+    if (hostTypeFilter.length === 1) f.hostType = hostTypeFilter[0];
     return f;
-  }, [searchQuery, statusFilter, osFilter, subnetFilter]);
+  }, [searchQuery, statusFilter, typeFilter, hostTypeFilter]);
 
-  const { servers, isLoading, mutate } = useServers(filters);
+  const { services, isLoading, mutate } = useServices({
+    ...filters,
+    sortBy: tableHeaders.find((h) => h.sort !== null)?.key,
+    sortOrder: tableHeaders.find((h) => h.sort !== null)?.sort || "asc",
+  });
 
-  const tableData = useMemo(() => servers.map(serverToTableRow), [servers]);
+  // Filter by health client-side (not in API yet)
+  const filteredServices = useMemo(() => {
+    if (healthFilter.length === 0) return services;
+    return services.filter((s) => healthFilter.includes(s.health));
+  }, [services, healthFilter]);
+
+  const tableData = useMemo(
+    () => filteredServices.map(serviceToTableRow),
+    [filteredServices]
+  );
 
   const hasActiveFilters =
-    statusFilter.length > 0 || osFilter.length > 0 || subnetFilter.length > 0;
+    statusFilter.length > 0 ||
+    typeFilter.length > 0 ||
+    healthFilter.length > 0 ||
+    hostTypeFilter.length > 0;
 
   const clearAllFilters = () => {
     setStatusFilter([]);
-    setOsFilter([]);
-    setSubnetFilter([]);
+    setTypeFilter([]);
+    setHealthFilter([]);
+    setHostTypeFilter([]);
   };
 
   const initialTableData: CellValue[][] = [];
@@ -76,19 +95,19 @@ export default function ServerPage() {
         />
       )}
       {isCreateModalOpen && (
-        <ServerModal
+        <ServiceModal
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => mutate()}
         />
       )}
 
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl">Servers</h1>
+        <h1 className="text-2xl">Services</h1>
         <BaseButton
           icon={<PlusIcon width={14} />}
           onClick={() => setIsCreateModalOpen(true)}
         >
-          Add Server
+          Add Service
         </BaseButton>
       </div>
 
@@ -108,7 +127,7 @@ export default function ServerPage() {
             </span>
             <FilterDropdown
               label="Status"
-              options={SERVER_STATUS_OPTIONS.map((opt) => ({
+              options={SERVICE_STATUS_OPTIONS.map((opt) => ({
                 value: opt.id,
                 label: opt.name,
               }))}
@@ -116,22 +135,31 @@ export default function ServerPage() {
               onChange={setStatusFilter}
             />
             <FilterDropdown
-              label="OS"
-              options={osOptions.map((opt) => ({
-                value: opt.name,
+              label="Type"
+              options={SERVICE_TYPE_OPTIONS.map((opt) => ({
+                value: opt.id,
                 label: opt.name,
               }))}
-              selected={osFilter}
-              onChange={setOsFilter}
+              selected={typeFilter}
+              onChange={setTypeFilter}
             />
             <FilterDropdown
-              label="Subnet"
-              options={subnetOptions.map((opt) => ({
-                value: opt.name,
+              label="Health"
+              options={SERVICE_HEALTH_OPTIONS.map((opt) => ({
+                value: opt.id,
                 label: opt.name,
               }))}
-              selected={subnetFilter}
-              onChange={setSubnetFilter}
+              selected={healthFilter}
+              onChange={setHealthFilter}
+            />
+            <FilterDropdown
+              label="Host Type"
+              options={HOST_TYPE_OPTIONS.map((opt) => ({
+                value: opt.id,
+                label: opt.name,
+              }))}
+              selected={hostTypeFilter}
+              onChange={setHostTypeFilter}
             />
             {hasActiveFilters && (
               <button

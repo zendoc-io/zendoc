@@ -48,7 +48,7 @@ export default function NavLink({ icon, title, slug, subLinks }: NavLinkProps) {
       ) : (
         <div className="border-b border-gray-700">
           <Link
-            href="#"
+            href={`/${slug}`}
             className="flex items-center gap-2 p-3 py-4 font-medium transition-colors duration-100 hover:bg-gray-700"
           >
             {icon}

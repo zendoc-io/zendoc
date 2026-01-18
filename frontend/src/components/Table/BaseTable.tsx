@@ -37,7 +37,7 @@ export default function BaseTable(props: Props) {
   }
 
   const tableData = useMemo<CellValue[][]>(() => {
-    let filteredData = [...props.data];
+    const filteredData = [...props.data];
 
     const sortHeader = props.headers.find((header) => header.sort !== null);
 

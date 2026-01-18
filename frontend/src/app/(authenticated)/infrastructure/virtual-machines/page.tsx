@@ -1,44 +1,42 @@
 "use client";
+
 import BaseInput from "@/components/inputs/BaseInput";
 import SearchIcon from "@/../public/icons/search.svg";
 import PlusIcon from "@/../public/icons/plus.svg";
+import BaseButton from "@/components/BaseButton";
+import ChevronIcon from "@/../public/icons/chevron.svg";
 import TableViewIcon from "@/../public/icons/table-view.svg";
 import PencilIcon from "@/../public/icons/pencil.svg";
-import ChevronIcon from "@/../public/icons/chevron.svg";
-import BaseButton from "@/components/BaseButton";
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { CellValue, TableHeader } from "@/components/Table/Table";
 import EditViewModal from "@/components/modal/EditViewModal";
 import BaseTable from "@/components/Table/BaseTable";
 import MobileTableWarning from "@/components/MobileTableWarning";
 import FilterDropdown from "@/components/FilterDropdown";
-import ServerModal from "@/components/modal/ServerModal";
-import { useServers } from "@/hooks/useServers";
-import {
-  SERVER_STATUS_OPTIONS,
-  useOSOptions,
-  useSubnetOptions,
-} from "@/hooks/useFilterOptions";
-import { serverToTableRow } from "@/utils/tableUtils";
+import VMModal from "@/components/modal/VMModal";
+import { useVMs } from "@/hooks/useVMs";
+import { VM_STATUS_OPTIONS, useServerOptions } from "@/hooks/useFilterOptions";
+import { vmToTableRow } from "@/utils/tableUtils";
 
-export default function ServerPage() {
+export default function VirtualMachinesPage() {
   const [isEditViewModalOpen, setIsEditViewModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [osFilter, setOsFilter] = useState<string[]>([]);
-  const [subnetFilter, setSubnetFilter] = useState<string[]>([]);
+  const [hostFilter, setHostFilter] = useState<string[]>([]);
 
-  const { options: osOptions } = useOSOptions();
-  const { options: subnetOptions } = useSubnetOptions();
+  const { options: serverOptions } = useServerOptions();
 
   const [tableHeaders, setTableHeaders] = useState<TableHeader[]>([
     { key: "id", name: "ID", sort: null, show: false, type: "text" },
     { key: "name", name: "Name", sort: "asc", show: true, type: "link" },
     { key: "status", name: "Status", sort: null, show: true, type: "box" },
-    { key: "ip", name: "IP", sort: null, show: true, type: "text" },
-    { key: "subnet", name: "Subnet", sort: null, show: true, type: "text" },
-    { key: "os", name: "OS", sort: null, show: true, type: "text" },
+    { key: "host", name: "Host Server", sort: null, show: true, type: "link" },
+    { key: "vcpu", name: "vCPU", sort: null, show: true, type: "text" },
+    { key: "ram", name: "RAM", sort: null, show: true, type: "text" },
+    { key: "disk", name: "Disk", sort: null, show: true, type: "text" },
+    { key: "os", name: "OS", sort: null, show: true, type: "os" },
+    { key: "services", name: "Services", sort: null, show: true, type: "link" },
   ]);
 
   // Build filters object
@@ -46,22 +44,23 @@ export default function ServerPage() {
     const f: Record<string, string> = {};
     if (searchQuery) f.name = searchQuery;
     if (statusFilter.length === 1) f.status = statusFilter[0];
-    if (osFilter.length === 1) f.os = osFilter[0];
-    if (subnetFilter.length === 1) f.subnet = subnetFilter[0];
+    if (hostFilter.length === 1) f.hostId = hostFilter[0];
     return f;
-  }, [searchQuery, statusFilter, osFilter, subnetFilter]);
+  }, [searchQuery, statusFilter, hostFilter]);
 
-  const { servers, isLoading, mutate } = useServers(filters);
+  const { vms, isLoading, mutate } = useVMs({
+    ...filters,
+    sortBy: tableHeaders.find((h) => h.sort !== null)?.key,
+    sortOrder: tableHeaders.find((h) => h.sort !== null)?.sort || "asc",
+  });
 
-  const tableData = useMemo(() => servers.map(serverToTableRow), [servers]);
+  const tableData = useMemo(() => vms.map(vmToTableRow), [vms]);
 
-  const hasActiveFilters =
-    statusFilter.length > 0 || osFilter.length > 0 || subnetFilter.length > 0;
+  const hasActiveFilters = statusFilter.length > 0 || hostFilter.length > 0;
 
   const clearAllFilters = () => {
     setStatusFilter([]);
-    setOsFilter([]);
-    setSubnetFilter([]);
+    setHostFilter([]);
   };
 
   const initialTableData: CellValue[][] = [];
@@ -76,19 +75,19 @@ export default function ServerPage() {
         />
       )}
       {isCreateModalOpen && (
-        <ServerModal
+        <VMModal
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => mutate()}
         />
       )}
 
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl">Servers</h1>
+        <h1 className="text-2xl">Virtual Machines</h1>
         <BaseButton
           icon={<PlusIcon width={14} />}
           onClick={() => setIsCreateModalOpen(true)}
         >
-          Add Server
+          Add VM
         </BaseButton>
       </div>
 
@@ -108,7 +107,7 @@ export default function ServerPage() {
             </span>
             <FilterDropdown
               label="Status"
-              options={SERVER_STATUS_OPTIONS.map((opt) => ({
+              options={VM_STATUS_OPTIONS.map((opt) => ({
                 value: opt.id,
                 label: opt.name,
               }))}
@@ -116,22 +115,13 @@ export default function ServerPage() {
               onChange={setStatusFilter}
             />
             <FilterDropdown
-              label="OS"
-              options={osOptions.map((opt) => ({
-                value: opt.name,
+              label="Host Server"
+              options={serverOptions.map((opt) => ({
+                value: opt.id,
                 label: opt.name,
               }))}
-              selected={osFilter}
-              onChange={setOsFilter}
-            />
-            <FilterDropdown
-              label="Subnet"
-              options={subnetOptions.map((opt) => ({
-                value: opt.name,
-                label: opt.name,
-              }))}
-              selected={subnetFilter}
-              onChange={setSubnetFilter}
+              selected={hostFilter}
+              onChange={setHostFilter}
             />
             {hasActiveFilters && (
               <button

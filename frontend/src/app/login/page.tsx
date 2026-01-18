@@ -19,7 +19,7 @@ export default function LoginPage() {
     const password = data.password;
 
     try {
-      const data = await apiFetch("/auth/login/password", {
+      await apiFetch("/auth/login/password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -35,7 +35,7 @@ export default function LoginPage() {
       setTimeout(() => {
         window.location.href = "/";
       }, 1000);
-    } catch (error) {
+    } catch {
       setError("Invalid email or password");
     }
   }

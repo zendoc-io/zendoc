@@ -12,6 +12,7 @@ export type BaseButtonProps = {
   buttonType?: "button" | "submit" | "reset";
   fullWidth?: boolean;
   className?: string;
+  disabled?: boolean;
 };
 
 export default function BaseButton({
@@ -25,11 +26,12 @@ export default function BaseButton({
   buttonType = "button",
   fullWidth = false,
   className,
+  disabled = false,
 }: BaseButtonProps) {
   let classes = {
     primary:
-      "flex items-center justify-center gap-3 text-center rounded-lg bg-primary p-4 px-6 font-semibold text-white tracking-[0.016rem] hover:bg-primary-dark transition-colors cursor-pointer",
-    icon: "rounded-lg bg-gray-600 p-3 flex items-center justify-center gap-3 cursor-pointer hover:bg-gray-700 transition-colors",
+      "flex items-center justify-center gap-3 text-center rounded-lg bg-primary p-4 px-6 font-semibold text-white tracking-[0.016rem] hover:bg-primary-dark transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+    icon: "rounded-lg bg-gray-600 p-3 flex items-center justify-center gap-3 cursor-pointer hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
   }[type];
   if (!fullWidth) {
     classes += " w-fit";
@@ -51,7 +53,7 @@ export default function BaseButton({
   }
 
   return (
-    <button className={classes} onClick={onClick} type={buttonType}>
+    <button className={classes} onClick={onClick} type={buttonType} disabled={disabled}>
       {iconPosition === "left" && icon}
       {children}
       {iconPosition === "right" && icon}
